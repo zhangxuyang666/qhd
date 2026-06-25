@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>秦皇岛 · 实时天气</title>
 
-    <!-- Chart.js (轻量折线图) -->
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
     </script>
-    <!-- Leaflet (免费地图) -->
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
     </script>
@@ -24,8 +24,6 @@
 
         body {
             min-height: 100vh;
-            background: #0b0e1a;
-            /* 高级深色渐变背景，模仿 iOS 天气 */
             background: radial-gradient(ellipse at 20% 20%, #1a2332, #0b0e1a 70%);
             color: #f0f4ff;
             padding: 0 0 40px 0;
@@ -33,7 +31,7 @@
             position: relative;
         }
 
-        /* ===== 背景动态光晕 ===== */
+        /* ===== 背景光晕 ===== */
         body::before {
             content: '';
             position: fixed;
@@ -75,7 +73,7 @@
             }
         }
 
-        /* ===== 雨滴画布 (动效) ===== */
+        /* ===== 雨滴画布 ===== */
         #rain-canvas {
             position: fixed;
             top: 0;
@@ -140,7 +138,7 @@
             white-space: nowrap;
         }
 
-        /* ===== 二级菜单 (导航) ===== */
+        /* ===== 二级菜单 ===== */
         .nav-menu {
             display: flex;
             flex-wrap: wrap;
@@ -178,7 +176,6 @@
             border-color: rgba(70, 130, 255, 0.25);
         }
 
-        /* 下拉菜单 */
         .dropdown {
             display: none;
             position: absolute;
@@ -219,7 +216,7 @@
             opacity: 0.6;
         }
 
-        /* ===== 卡片通用样式 ===== */
+        /* ===== 卡片 ===== */
         .card {
             background: rgba(255, 255, 255, 0.04);
             backdrop-filter: blur(16px);
@@ -253,7 +250,7 @@
             color: rgba(255, 255, 255, 0.5);
         }
 
-        /* ===== 实时天气主卡片 ===== */
+        /* 实时天气主卡片 */
         .weather-main {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -334,7 +331,7 @@
             margin-top: 2px;
         }
 
-        /* ===== 逐小时 ===== */
+        /* 逐小时 */
         .hourly-scroll {
             display: flex;
             gap: 12px;
@@ -380,7 +377,7 @@
             color: rgba(255, 255, 255, 0.4);
         }
 
-        /* ===== 7日预报 ===== */
+        /* 7日预报 */
         .forecast-list {
             display: flex;
             flex-direction: column;
@@ -426,7 +423,7 @@
             text-align: right;
         }
 
-        /* ===== 折线图容器 ===== */
+        /* 折线图 */
         .chart-container {
             position: relative;
             height: 200px;
@@ -438,7 +435,7 @@
             height: 100% !important;
         }
 
-        /* ===== 地图容器 ===== */
+        /* 地图 */
         .map-container {
             position: relative;
             height: 280px;
@@ -456,7 +453,6 @@
             color: rgba(255, 255, 255, 0.5) !important;
         }
 
-        /* ===== 地图切换按钮 ===== */
         .map-tabs {
             display: flex;
             gap: 8px;
@@ -486,7 +482,7 @@
             color: #fff;
         }
 
-        /* ===== 空气质量卡片内部 ===== */
+        /* 空气质量卡片 */
         .aqi-display {
             display: flex;
             align-items: center;
@@ -523,8 +519,6 @@
             font-weight: 500;
             margin-left: 4px;
         }
-
-        /* ===== 空气质量等级颜色 ===== */
         .aqi-good {
             color: #4caf50;
         }
@@ -544,7 +538,7 @@
             color: #7c4d4d;
         }
 
-        /* ===== 响应式 ===== */
+        /* 响应式 */
         @media (max-width: 640px) {
             .header {
                 flex-direction: column;
@@ -659,40 +653,8 @@
             }
         }
 
-        /* ===== 加载骨架 ===== */
-        .skeleton {
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 25%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.02) 75%);
-            background-size: 200% 100%;
-            animation: skeleton 1.8s infinite;
-            border-radius: 8px;
-        }
-        @keyframes skeleton {
-            0% {
-                background-position: -200% 0;
-            }
-            100% {
-                background-position: 200% 0;
-            }
-        }
-
-        /* ===== 工具类 ===== */
         .hidden {
             display: none !important;
-        }
-        .text-center {
-            text-align: center;
-        }
-        .mt-8 {
-            margin-top: 8px;
-        }
-        .mb-8 {
-            margin-bottom: 8px;
-        }
-        .gap-8 {
-            gap: 8px;
-        }
-        .flex {
-            display: flex;
         }
         .flex-between {
             display: flex;
@@ -700,22 +662,9 @@
             align-items: center;
         }
 
-        /* ===== 滚动条美化 ===== */
-        ::-webkit-scrollbar {
-            width: 4px;
-            height: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-
-        /* ===== 地图标记自定义 ===== */
+        /* 自定义地图标记 */
         .custom-marker {
-            background: rgba(20, 30, 50, 0.75);
+            background: rgba(20, 30, 50, 0.8);
             backdrop-filter: blur(8px);
             border-radius: 12px;
             padding: 4px 10px;
@@ -724,17 +673,22 @@
             font-size: 11px;
             text-align: center;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            min-width: 60px;
         }
         .custom-marker .city {
             font-weight: 600;
             font-size: 12px;
         }
         .custom-marker .cloud {
-            font-size: 14px;
+            font-size: 18px;
         }
         .custom-marker .temp {
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 400;
+        }
+        .custom-marker .extra {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.6);
         }
     </style>
 </head>
@@ -743,7 +697,6 @@
     <!-- ===== 雨滴画布 ===== -->
     <canvas id="rain-canvas"></canvas>
 
-    <!-- ===== 主应用 ===== -->
     <div class="app-wrapper">
 
         <!-- ===== 顶部 ===== -->
@@ -794,9 +747,7 @@
             </div>
         </nav>
 
-        <!-- ===== 内容区 ===== -->
-
-        <!-- 1. 实时天气 -->
+        <!-- ===== 1. 实时天气 ===== -->
         <section id="section-current" class="card weather-main">
             <div class="temp-section">
                 <span class="temp-now" id="currentTemp">--<sup>°</sup></span>
@@ -813,7 +764,7 @@
             </div>
         </section>
 
-        <!-- 2. 空气质量 -->
+        <!-- ===== 2. 空气质量 (WAQI) ===== -->
         <section id="section-air" class="card">
             <div class="card-title">🌬 空气质量 <span class="badge" id="aqiLevel">--</span></div>
             <div class="aqi-display">
@@ -829,23 +780,19 @@
             </div>
         </section>
 
-        <!-- 3. 逐小时 -->
+        <!-- ===== 3. 逐小时 ===== -->
         <section id="section-hourly" class="card">
             <div class="card-title">⏱ 逐小时预报 <span class="badge">未来24h</span></div>
-            <div class="hourly-scroll" id="hourlyContainer">
-                <!-- JS 渲染 -->
-            </div>
+            <div class="hourly-scroll" id="hourlyContainer"></div>
         </section>
 
-        <!-- 4. 7日预报 -->
+        <!-- ===== 4. 7日预报 ===== -->
         <section id="section-forecast" class="card">
             <div class="card-title">📅 7日天气预报</div>
-            <div class="forecast-list" id="forecastContainer">
-                <!-- JS 渲染 -->
-            </div>
+            <div class="forecast-list" id="forecastContainer"></div>
         </section>
 
-        <!-- 5. 温度趋势折线图 -->
+        <!-- ===== 5. 折线图 ===== -->
         <section id="section-chart" class="card">
             <div class="card-title">📈 温度趋势 <span class="badge">7日</span></div>
             <div class="chart-container">
@@ -853,7 +800,7 @@
             </div>
         </section>
 
-        <!-- 6. 地图 (空气质量 & 云层 切换) -->
+        <!-- ===== 6. 地图 (空气质量 & 云层 切换) ===== -->
         <section id="section-airmap" class="card">
             <div class="card-title">🗺 天气地图</div>
             <div class="map-tabs">
@@ -863,10 +810,10 @@
             <div class="map-container" id="mapContainer"></div>
         </section>
         <section id="section-cloudmap" class="card hidden">
-            <!-- 和上面同一个地图容器，用 JS 控制显示 -->
+            <!-- 与上共用地图 -->
         </section>
 
-        <!-- 7. 更多 (风力/日出日落/气压/紫外线 已在上方展示，这里加一个综合卡片) -->
+        <!-- ===== 7. 综合数据 ===== -->
         <section id="section-more" class="card">
             <div class="card-title">📌 综合数据</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;padding:4px 0;">
@@ -878,29 +825,36 @@
             </div>
         </section>
 
-        <!-- 底部留白 -->
         <div style="height:20px;"></div>
-
     </div>
 
     <script>
         // ============================================================
-        //  配置
+        //  ⚙️ 配置 — 已填入您的 WAQI Token
+        // ============================================================
+        const WAQI_TOKEN = '59719da17098222846ba72f114c56a0870a9bb12';
+
+        // ============================================================
+        //  常量
         // ============================================================
         const LAT = 39.93;
         const LON = 119.59;
         const TIMEZONE = 'Asia/Shanghai';
 
-        // DOM 引用
         const $ = (s) => document.querySelector(s);
         const $$ = (s) => document.querySelectorAll(s);
 
         // ============================================================
-        //  工具函数
+        //  工具
         // ============================================================
         function formatTime(iso) {
             const d = new Date(iso);
             return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+        }
+
+        function formatDateShort(iso) {
+            const d = new Date(iso);
+            return (d.getMonth() + 1) + '/' + d.getDate();
         }
 
         function formatDate(iso) {
@@ -909,13 +863,7 @@
             return weekdays[d.getDay()];
         }
 
-        function formatDateShort(iso) {
-            const d = new Date(iso);
-            return (d.getMonth() + 1) + '/' + d.getDate();
-        }
-
         function getWeatherEmoji(code) {
-            // WMO 天气代码映射
             const map = {
                 0: '☀️',
                 1: '🌤',
@@ -1013,12 +961,10 @@
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
             }
-
             resize() {
                 this.canvas.width = window.innerWidth;
                 this.canvas.height = window.innerHeight;
             }
-
             start() {
                 if (this.running) return;
                 this.running = true;
@@ -1037,21 +983,15 @@
                 this.canvas.classList.add('active');
                 this.animate();
             }
-
             stop() {
                 this.running = false;
-                if (this.animId) {
-                    cancelAnimationFrame(this.animId);
-                    this.animId = null;
-                }
+                if (this.animId) cancelAnimationFrame(this.animId);
                 this.canvas.classList.remove('active');
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             }
-
             animate() {
                 if (!this.running) return;
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
                 for (const d of this.drops) {
                     d.y += d.speed;
                     if (d.y > this.canvas.height) {
@@ -1065,19 +1005,20 @@
                     this.ctx.lineWidth = d.width;
                     this.ctx.stroke();
                 }
-
                 this.animId = requestAnimationFrame(() => this.animate());
             }
         }
 
         // ============================================================
-        //  天气数据获取 & UI 更新
+        //  数据获取 & UI 更新
         // ============================================================
         let rain = null;
         let chartInstance = null;
         let mapInstance = null;
         let mapMarkers = [];
-        let currentMapMode = 'air'; // 'air' | 'cloud'
+        let currentMapMode = 'air';
+        let weatherData = null;
+        let airData = null;
 
         // 初始化雨滴
         (function initRain() {
@@ -1085,7 +1026,6 @@
             rain = new RainEffect(canvas);
         })();
 
-        // 更新 UI 中的时间
         function updateClock() {
             const now = new Date();
             const s = now.getHours().toString().padStart(2, '0') + ':' +
@@ -1095,262 +1035,31 @@
         updateClock();
         setInterval(updateClock, 30000);
 
-        // ===== 获取数据 =====
-        async function fetchWeather() {
-            try {
-                // 1. 当前 + 小时 + 7日预报 (合并请求)
-                const url =
-                    `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,uv_index,pressure_msl&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=${TIMEZONE}&forecast_days=7`;
+        // ---- 获取 Open-Meteo 天气 ----
+        async function fetchOpenMeteo() {
+            const url =
+                `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,uv_index,pressure_msl&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=${TIMEZONE}&forecast_days=7`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('Open-Meteo 请求失败');
+            return await resp.json();
+        }
 
-                const resp = await fetch(url);
-                if (!resp.ok) throw new Error('天气API请求失败');
-                const data = await resp.json();
-
-                // 2. 空气质量
-                const airUrl =
-                    `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&current=us_aqi,pm2_5,pm10,o3,no2,so2,co&timezone=${TIMEZONE}`;
-                const airResp = await fetch(airUrl);
-                let airData = null;
-                if (airResp.ok) airData = await airResp.json();
-
-                return { weather: data, air: airData };
-            } catch (err) {
-                console.error('获取数据失败:', err);
+        // ---- 获取 WAQI 空气质量 ----
+        async function fetchWAQI(lat, lon) {
+            if (!WAQI_TOKEN || WAQI_TOKEN === 'YOUR_WAQI_TOKEN_HERE') {
+                console.warn('WAQI Token 未设置，空气质量数据不可用');
                 return null;
             }
+            const url = `https://api.waqi.info/feed/geo:${lat};${lon}/?token=${WAQI_TOKEN}`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('WAQI 请求失败');
+            const data = await resp.json();
+            if (data.status !== 'ok') throw new Error('WAQI 返回错误: ' + data.status);
+            return data.data;
         }
 
-        // ===== 渲染所有 =====
-        async function renderAll() {
-            const result = await fetchWeather();
-            if (!result) {
-                // 显示降级信息
-                document.querySelectorAll('.value, .aqi-big, .temp-now').forEach(el => {
-                    if (!el.closest('.aqi-big') && !el.closest('.temp-now')) {
-                        if (el.textContent === '--' || el.textContent.includes('--')) {
-                            // 保留占位
-                        }
-                    }
-                });
-                return;
-            }
-
-            const { weather, air } = result;
-            const current = weather.current;
-            const hourly = weather.hourly;
-            const daily = weather.daily;
-
-            // ---- 实时天气 ----
-            document.getElementById('currentTemp').innerHTML = Math.round(current.temperature_2m) + '<sup>°</sup>';
-            document.getElementById('weatherDesc').textContent = getWeatherDesc(current.weather_code);
-            document.getElementById('feelsLike').innerHTML = Math.round(current.apparent_temperature) + '<span class="unit">°</span>';
-            document.getElementById('windSpeed').innerHTML = Math.round(current.wind_speed_10m) + '<span class="unit"> km/h</span>';
-            document.getElementById('windDir').textContent = current.wind_direction_10m + '°';
-            document.getElementById('uvIndex').innerHTML = current.uv_index.toFixed(1);
-            document.getElementById('uvLevel').textContent = getUVLevel(current.uv_index);
-            document.getElementById('pressure').innerHTML = Math.round(current.pressure_msl) + '<span class="unit"> hPa</span>';
-            document.getElementById('humidity').innerHTML = Math.round(current.relative_humidity_2m) + '<span class="unit">%</span>';
-
-            // 日出日落
-            if (daily && daily.sunrise && daily.sunrise.length > 0) {
-                const sr = new Date(daily.sunrise[0]);
-                const ss = new Date(daily.sunset[0]);
-                document.getElementById('sunrise').textContent = sr.getHours().toString().padStart(2, '0') + ':' + sr.getMinutes()
-                    .toString().padStart(2, '0');
-                document.getElementById('sunset').textContent = ss.getHours().toString().padStart(2, '0') + ':' + ss.getMinutes()
-                    .toString().padStart(2, '0');
-                document.getElementById('moreSunrise').textContent = document.getElementById('sunrise').textContent;
-                document.getElementById('moreSunset').textContent = document.getElementById('sunset').textContent;
-            }
-
-            // 温度范围
-            if (daily && daily.temperature_2m_max && daily.temperature_2m_max.length > 0) {
-                const high = Math.round(daily.temperature_2m_max[0]);
-                const low = Math.round(daily.temperature_2m_min[0]);
-                document.getElementById('tempRange').textContent = high + '° / ' + low + '°';
-            }
-
-            // 更多
-            document.getElementById('moreWind').textContent = Math.round(current.wind_speed_10m) + ' km/h';
-            document.getElementById('morePressure').textContent = Math.round(current.pressure_msl) + ' hPa';
-            document.getElementById('moreUv').textContent = current.uv_index.toFixed(1);
-
-            // ---- 雨滴动效 ----
-            const rainCodes = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82];
-            if (rainCodes.includes(current.weather_code)) {
-                rain.start();
-            } else {
-                rain.stop();
-            }
-
-            // ---- 空气质量 ----
-            if (air && air.current) {
-                const aqi = air.current.us_aqi || 0;
-                const level = getAQILevel(aqi);
-                document.getElementById('aqiBig').innerHTML = Math.round(aqi) + '<span class="aqi-label">AQI</span>';
-                document.getElementById('aqiLevel').textContent = level.label;
-                document.getElementById('aqiLevel').className = 'badge ' + level.cls;
-                document.getElementById('aqiBig').className = 'aqi-big ' + level.cls;
-
-                document.getElementById('pm25').textContent = (air.current.pm2_5 || 0).toFixed(1) + ' µg';
-                document.getElementById('pm10').textContent = (air.current.pm10 || 0).toFixed(1) + ' µg';
-                document.getElementById('o3').textContent = (air.current.o3 || 0).toFixed(1) + ' µg';
-                document.getElementById('no2').textContent = (air.current.no2 || 0).toFixed(1) + ' µg';
-                document.getElementById('so2').textContent = (air.current.so2 || 0).toFixed(1) + ' µg';
-                document.getElementById('co').textContent = (air.current.co || 0).toFixed(1) + ' µg';
-            } else {
-                document.getElementById('aqiBig').innerHTML = '--<span class="aqi-label">AQI</span>';
-                document.getElementById('aqiLevel').textContent = '无数据';
-            }
-
-            // ---- 逐小时 (24h) ----
-            const hourlyContainer = document.getElementById('hourlyContainer');
-            hourlyContainer.innerHTML = '';
-            const now = new Date();
-            const currentHour = now.getHours();
-            let startIdx = 0;
-            if (hourly && hourly.time) {
-                // 找到当前小时索引
-                for (let i = 0; i < hourly.time.length; i++) {
-                    const h = new Date(hourly.time[i]);
-                    if (h.getHours() === currentHour && h.getDate() === now.getDate()) {
-                        startIdx = i;
-                        break;
-                    }
-                }
-                // 取24个
-                for (let i = startIdx; i < Math.min(startIdx + 24, hourly.time.length); i++) {
-                    const t = new Date(hourly.time[i]);
-                    const temp = Math.round(hourly.temperature_2m[i]);
-                    const code = hourly.weather_code[i];
-                    const pop = hourly.precipitation_probability ? Math.round(hourly.precipitation_probability[i]) : 0;
-                    const div = document.createElement('div');
-                    div.className = 'hourly-item';
-                    div.innerHTML = `
-                        <div class="h-time">${t.getHours().toString().padStart(2,'0')}:00</div>
-                        <div class="h-icon">${getWeatherEmoji(code)}</div>
-                        <div class="h-temp">${temp}°</div>
-                        <div class="h-pop">${pop}%</div>
-                    `;
-                    hourlyContainer.appendChild(div);
-                }
-            }
-
-            // ---- 7日预报 ----
-            const forecastContainer = document.getElementById('forecastContainer');
-            forecastContainer.innerHTML = '';
-            if (daily && daily.time) {
-                for (let i = 0; i < Math.min(7, daily.time.length); i++) {
-                    const date = new Date(daily.time[i]);
-                    const high = Math.round(daily.temperature_2m_max[i]);
-                    const low = Math.round(daily.temperature_2m_min[i]);
-                    const code = daily.weather_code[i];
-                    const dayLabel = i === 0 ? '今天' : formatDate(daily.time[i]);
-                    const div = document.createElement('div');
-                    div.className = 'forecast-row';
-                    div.innerHTML = `
-                        <div class="f-day">${dayLabel} ${formatDateShort(daily.time[i])}</div>
-                        <div class="f-icon">${getWeatherEmoji(code)}</div>
-                        <div class="f-temps"><span class="high">${high}°</span><span class="low">${low}°</span></div>
-                        <div class="f-desc">${getWeatherDesc(code)}</div>
-                    `;
-                    forecastContainer.appendChild(div);
-                }
-            }
-
-            // ---- 折线图 (7日温度) ----
-            if (daily && daily.time && daily.time.length >= 7) {
-                const labels = daily.time.map(d => formatDateShort(d));
-                const highs = daily.temperature_2m_max.map(v => Math.round(v));
-                const lows = daily.temperature_2m_min.map(v => Math.round(v));
-
-                const ctx = document.getElementById('tempChart').getContext('2d');
-                if (chartInstance) chartInstance.destroy();
-                chartInstance = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: '最高温',
-                            data: highs,
-                            borderColor: '#ff8a7a',
-                            backgroundColor: 'rgba(255,138,122,0.1)',
-                            tension: 0.3,
-                            pointBackgroundColor: '#ff8a7a',
-                            pointRadius: 4,
-                            fill: true,
-                        }, {
-                            label: '最低温',
-                            data: lows,
-                            borderColor: '#7ab8ff',
-                            backgroundColor: 'rgba(122,184,255,0.1)',
-                            tension: 0.3,
-                            pointBackgroundColor: '#7ab8ff',
-                            pointRadius: 4,
-                            fill: true,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                labels: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 } },
-                                grid: { color: 'rgba(255,255,255,0.04)' }
-                            },
-                            y: {
-                                ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 } },
-                                grid: { color: 'rgba(255,255,255,0.04)' }
-                            }
-                        },
-                        interaction: {
-                            intersect: false,
-                            mode: 'index'
-                        }
-                    }
-                });
-            }
-
-            // ---- 地图 (Leaflet) ----
-            renderMap(weather, air);
-
-            // ---- 菜单高亮 ----
-            setupNavScroll();
-        }
-
-        // ============================================================
-        //  地图渲染 (Leaflet)
-        // ============================================================
-        function renderMap(weather, air) {
-            const container = document.getElementById('mapContainer');
-            if (!mapInstance) {
-                mapInstance = L.map(container, {
-                    center: [LAT, LON],
-                    zoom: 8,
-                    zoomControl: false,
-                    attributionControl: true
-                });
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                    maxZoom: 18,
-                    minZoom: 4
-                }).addTo(mapInstance);
-                // 添加缩放控件
-                L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
-            } else {
-                mapInstance.invalidateSize();
-            }
-
-            // 清除旧标记
-            mapMarkers.forEach(m => mapInstance.removeLayer(m));
-            mapMarkers = [];
-
-            // 使用秦皇岛及周边城市数据
+        // ---- 获取周边城市天气 (用于地图) ----
+        async function fetchCitiesWeather() {
             const cities = [
                 { name: '秦皇岛', lat: 39.93, lon: 119.59 },
                 { name: '北京', lat: 39.90, lon: 116.40 },
@@ -1361,94 +1070,336 @@
                 { name: '葫芦岛', lat: 40.71, lon: 120.83 },
                 { name: '大连', lat: 38.92, lon: 121.64 },
             ];
-
-            // 获取每个城市的天气 (使用已获取的数据 + 额外请求)
-            // 为了简化，我们只用已获取的秦皇岛数据 + 静态展示
-            // 但为了地图丰富，我们为每个城市获取数据
-            const promises = cities.map(async (city) => {
-                if (city.name === '秦皇岛') {
-                    // 用已有数据
-                    const w = weather.current;
-                    return {
-                        ...city,
-                        temp: Math.round(w.temperature_2m),
-                        code: w.weather_code,
-                        cloud: 50, // 近似
-                        aqi: air && air.current ? Math.round(air.current.us_aqi) : 60
-                    };
-                }
+            const results = [];
+            for (const city of cities) {
                 try {
                     const url =
                         `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code,cloudcover&timezone=${TIMEZONE}`;
                     const resp = await fetch(url);
-                    if (!resp.ok) return null;
+                    if (!resp.ok) continue;
                     const data = await resp.json();
-                    return {
+                    results.push({
                         ...city,
                         temp: Math.round(data.current.temperature_2m),
                         code: data.current.weather_code,
                         cloud: Math.round(data.current.cloudcover || 50),
-                        aqi: 50 + Math.floor(Math.random() * 80) // 模拟
-                    };
-                } catch {
-                    return null;
-                }
-            });
-
-            Promise.all(promises).then(results => {
-                const valid = results.filter(r => r !== null);
-                for (const city of valid) {
-                    const icon = L.divIcon({
-                        className: 'custom-marker',
-                        html: `
-                            <div class="city">${city.name}</div>
-                            <div class="cloud">${getWeatherEmoji(city.code)}</div>
-                            <div class="temp">${city.temp}°</div>
-                            <div style="font-size:10px;color:rgba(255,255,255,0.5);">
-                                ${currentMapMode === 'air' ? 'AQI '+city.aqi : '☁️ '+city.cloud+'%'}
-                            </div>
-                        `,
-                        iconSize: [70, 70],
-                        iconAnchor: [35, 35]
                     });
-                    const marker = L.marker([city.lat, city.lon], { icon }).addTo(mapInstance);
-                    mapMarkers.push(marker);
+                } catch (e) {
+                    console.warn('获取城市天气失败:', city.name);
                 }
-            });
-
-            // 如果当前是云层模式，调整显示
-            updateMapMode(currentMapMode);
+            }
+            return results;
         }
 
-        function updateMapMode(mode) {
-            currentMapMode = mode;
-            // 更新标记样式或内容 (重新渲染)
-            // 由于标记已渲染，我们只需切换tab样式
-            document.querySelectorAll('.map-tabs button').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.map === mode);
-            });
-            // 重新渲染地图数据 (简单刷新)
-            // 我们通过重新调用 renderMap 来更新，但为了避免闪烁，我们只更新标记内容
-            // 实际上，我们可以在标记中显示不同数据，但为了简单，我们重新获取数据
-            // 这里我们只刷新标记显示，但标记内容是固定的，所以我们需要重新创建标记
-            // 简单起见，我们重新加载地图数据
-            // 但为了不频繁请求，我们用现有数据重新渲染
-            // 更好的方式：在标记中动态切换显示
-            // 由于标记已经创建，我们通过更新标记的 HTML 来切换
-            // 但是 Leaflet 的 DivIcon 不支持动态更新，所以我们需要重新创建标记
-            // 这里我们直接重新调用 renderMap，但传入已有的 weather 和 air
-            // 但这样会闪烁，所以我们可以保存数据并在切换时重新渲染
-            // 保存数据到全局
-            window._lastWeather = window._lastWeather || {};
-            window._lastAir = window._lastAir || {};
-            if (window._lastWeather && window._lastWeather.current) {
-                // 重新渲染地图
-                renderMap(window._lastWeather, window._lastAir);
+        // ---- 获取周边城市空气质量 (WAQI) ----
+        async function fetchCitiesAQI(cities) {
+            const results = [];
+            for (const city of cities) {
+                try {
+                    if (!WAQI_TOKEN || WAQI_TOKEN === 'YOUR_WAQI_TOKEN_HERE') break;
+                    const url = `https://api.waqi.info/feed/geo:${city.lat};${city.lon}/?token=${WAQI_TOKEN}`;
+                    const resp = await fetch(url);
+                    if (!resp.ok) continue;
+                    const data = await resp.json();
+                    if (data.status === 'ok') {
+                        results.push({
+                            ...city,
+                            aqi: data.data.aqi
+                        });
+                    } else {
+                        results.push({ ...city, aqi: null });
+                    }
+                } catch (e) {
+                    results.push({ ...city, aqi: null });
+                }
+            }
+            return results;
+        }
+
+        // ============================================================
+        //  渲染主函数
+        // ============================================================
+        async function renderAll() {
+            try {
+                // 1. 获取天气
+                const weather = await fetchOpenMeteo();
+                weatherData = weather;
+
+                // 2. 获取空气质量 (WAQI)
+                let aqiData = null;
+                try {
+                    aqiData = await fetchWAQI(LAT, LON);
+                    airData = aqiData;
+                } catch (e) {
+                    console.warn('WAQI 获取失败:', e.message);
+                    airData = null;
+                }
+
+                // ---- 更新实时天气 ----
+                const current = weather.current;
+                const daily = weather.daily;
+                const hourly = weather.hourly;
+
+                document.getElementById('currentTemp').innerHTML = Math.round(current.temperature_2m) + '<sup>°</sup>';
+                document.getElementById('weatherDesc').textContent = getWeatherDesc(current.weather_code);
+                document.getElementById('feelsLike').innerHTML = Math.round(current.apparent_temperature) +
+                    '<span class="unit">°</span>';
+                document.getElementById('windSpeed').innerHTML = Math.round(current.wind_speed_10m) +
+                    '<span class="unit"> km/h</span>';
+                document.getElementById('windDir').textContent = current.wind_direction_10m + '°';
+                document.getElementById('uvIndex').innerHTML = current.uv_index.toFixed(1);
+                document.getElementById('uvLevel').textContent = getUVLevel(current.uv_index);
+                document.getElementById('pressure').innerHTML = Math.round(current.pressure_msl) +
+                    '<span class="unit"> hPa</span>';
+                document.getElementById('humidity').innerHTML = Math.round(current.relative_humidity_2m) +
+                    '<span class="unit">%</span>';
+
+                if (daily && daily.sunrise && daily.sunrise.length > 0) {
+                    const sr = new Date(daily.sunrise[0]);
+                    const ss = new Date(daily.sunset[0]);
+                    document.getElementById('sunrise').textContent = sr.getHours().toString().padStart(2, '0') + ':' + sr
+                        .getMinutes().toString().padStart(2, '0');
+                    document.getElementById('sunset').textContent = ss.getHours().toString().padStart(2, '0') + ':' + ss
+                        .getMinutes().toString().padStart(2, '0');
+                    document.getElementById('moreSunrise').textContent = document.getElementById('sunrise').textContent;
+                    document.getElementById('moreSunset').textContent = document.getElementById('sunset').textContent;
+                }
+
+                if (daily && daily.temperature_2m_max && daily.temperature_2m_max.length > 0) {
+                    const high = Math.round(daily.temperature_2m_max[0]);
+                    const low = Math.round(daily.temperature_2m_min[0]);
+                    document.getElementById('tempRange').textContent = high + '° / ' + low + '°';
+                }
+
+                document.getElementById('moreWind').textContent = Math.round(current.wind_speed_10m) + ' km/h';
+                document.getElementById('morePressure').textContent = Math.round(current.pressure_msl) + ' hPa';
+                document.getElementById('moreUv').textContent = current.uv_index.toFixed(1);
+
+                // ---- 雨滴动效 ----
+                const rainCodes = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82];
+                if (rainCodes.includes(current.weather_code)) {
+                    rain.start();
+                } else {
+                    rain.stop();
+                }
+
+                // ---- 空气质量 (WAQI) ----
+                if (aqiData) {
+                    const aqi = aqiData.aqi || 0;
+                    const level = getAQILevel(aqi);
+                    document.getElementById('aqiBig').innerHTML = Math.round(aqi) + '<span class="aqi-label">AQI</span>';
+                    document.getElementById('aqiLevel').textContent = level.label;
+                    document.getElementById('aqiLevel').className = 'badge ' + level.cls;
+                    document.getElementById('aqiBig').className = 'aqi-big ' + level.cls;
+
+                    const iaqi = aqiData.iaqi || {};
+                    document.getElementById('pm25').textContent = (iaqi.pm25 ? iaqi.pm25.v : '--') + ' µg';
+                    document.getElementById('pm10').textContent = (iaqi.pm10 ? iaqi.pm10.v : '--') + ' µg';
+                    document.getElementById('o3').textContent = (iaqi.o3 ? iaqi.o3.v : '--') + ' µg';
+                    document.getElementById('no2').textContent = (iaqi.no2 ? iaqi.no2.v : '--') + ' µg';
+                    document.getElementById('so2').textContent = (iaqi.so2 ? iaqi.so2.v : '--') + ' µg';
+                    document.getElementById('co').textContent = (iaqi.co ? iaqi.co.v : '--') + ' µg';
+                } else {
+                    document.getElementById('aqiBig').innerHTML = '--<span class="aqi-label">AQI</span>';
+                    document.getElementById('aqiLevel').textContent = '无数据';
+                    ['pm25', 'pm10', 'o3', 'no2', 'so2', 'co'].forEach(id => {
+                        document.getElementById(id).textContent = '--';
+                    });
+                }
+
+                // ---- 逐小时 ----
+                const hourlyContainer = document.getElementById('hourlyContainer');
+                hourlyContainer.innerHTML = '';
+                const now = new Date();
+                const currentHour = now.getHours();
+                let startIdx = 0;
+                if (hourly && hourly.time) {
+                    for (let i = 0; i < hourly.time.length; i++) {
+                        const h = new Date(hourly.time[i]);
+                        if (h.getHours() === currentHour && h.getDate() === now.getDate()) {
+                            startIdx = i;
+                            break;
+                        }
+                    }
+                    for (let i = startIdx; i < Math.min(startIdx + 24, hourly.time.length); i++) {
+                        const t = new Date(hourly.time[i]);
+                        const temp = Math.round(hourly.temperature_2m[i]);
+                        const code = hourly.weather_code[i];
+                        const pop = hourly.precipitation_probability ? Math.round(hourly.precipitation_probability[i]) : 0;
+                        const div = document.createElement('div');
+                        div.className = 'hourly-item';
+                        div.innerHTML = `
+                            <div class="h-time">${t.getHours().toString().padStart(2,'0')}:00</div>
+                            <div class="h-icon">${getWeatherEmoji(code)}</div>
+                            <div class="h-temp">${temp}°</div>
+                            <div class="h-pop">${pop}%</div>
+                        `;
+                        hourlyContainer.appendChild(div);
+                    }
+                }
+
+                // ---- 7日预报 ----
+                const forecastContainer = document.getElementById('forecastContainer');
+                forecastContainer.innerHTML = '';
+                if (daily && daily.time) {
+                    for (let i = 0; i < Math.min(7, daily.time.length); i++) {
+                        const date = new Date(daily.time[i]);
+                        const high = Math.round(daily.temperature_2m_max[i]);
+                        const low = Math.round(daily.temperature_2m_min[i]);
+                        const code = daily.weather_code[i];
+                        const dayLabel = i === 0 ? '今天' : formatDate(daily.time[i]);
+                        const div = document.createElement('div');
+                        div.className = 'forecast-row';
+                        div.innerHTML = `
+                            <div class="f-day">${dayLabel} ${formatDateShort(daily.time[i])}</div>
+                            <div class="f-icon">${getWeatherEmoji(code)}</div>
+                            <div class="f-temps"><span class="high">${high}°</span><span class="low">${low}°</span></div>
+                            <div class="f-desc">${getWeatherDesc(code)}</div>
+                        `;
+                        forecastContainer.appendChild(div);
+                    }
+                }
+
+                // ---- 折线图 ----
+                if (daily && daily.time && daily.time.length >= 7) {
+                    const labels = daily.time.map(d => formatDateShort(d));
+                    const highs = daily.temperature_2m_max.map(v => Math.round(v));
+                    const lows = daily.temperature_2m_min.map(v => Math.round(v));
+                    const ctx = document.getElementById('tempChart').getContext('2d');
+                    if (chartInstance) chartInstance.destroy();
+                    chartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: '最高温',
+                                data: highs,
+                                borderColor: '#ff8a7a',
+                                backgroundColor: 'rgba(255,138,122,0.1)',
+                                tension: 0.3,
+                                pointBackgroundColor: '#ff8a7a',
+                                pointRadius: 4,
+                                fill: true,
+                            }, {
+                                label: '最低温',
+                                data: lows,
+                                borderColor: '#7ab8ff',
+                                backgroundColor: 'rgba(122,184,255,0.1)',
+                                tension: 0.3,
+                                pointBackgroundColor: '#7ab8ff',
+                                pointRadius: 4,
+                                fill: true,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    labels: { color: 'rgba(255,255,255,0.5)', font: { size: 11 } }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 } },
+                                    grid: { color: 'rgba(255,255,255,0.04)' }
+                                },
+                                y: {
+                                    ticks: { color: 'rgba(255,255,255,0.3)', font: { size: 10 } },
+                                    grid: { color: 'rgba(255,255,255,0.04)' }
+                                }
+                            },
+                            interaction: { intersect: false, mode: 'index' }
+                        }
+                    });
+                }
+
+                // ---- 地图 ----
+                await renderMap();
+
+                // ---- 导航高亮 ----
+                setupNavScroll();
+
+            } catch (err) {
+                console.error('渲染失败:', err);
             }
         }
 
         // ============================================================
-        //  导航 & 滚动高亮
+        //  地图渲染 (Esri 街道图，免注册)
+        // ============================================================
+        async function renderMap() {
+            const container = document.getElementById('mapContainer');
+            if (!mapInstance) {
+                mapInstance = L.map(container, {
+                    center: [LAT, LON],
+                    zoom: 8,
+                    zoomControl: false,
+                    attributionControl: true
+                });
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Esri, HERE, Garmin, © OpenStreetMap contributors',
+                    maxZoom: 19,
+                    minZoom: 4
+                }).addTo(mapInstance);
+                L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
+            } else {
+                mapInstance.invalidateSize();
+            }
+
+            // 清除旧标记
+            mapMarkers.forEach(m => mapInstance.removeLayer(m));
+            mapMarkers = [];
+
+            // 获取周边城市天气 + 空气质量
+            const citiesWeather = await fetchCitiesWeather();
+            let citiesAQI = [];
+            if (WAQI_TOKEN && WAQI_TOKEN !== 'YOUR_WAQI_TOKEN_HERE') {
+                citiesAQI = await fetchCitiesAQI(citiesWeather);
+            }
+
+            const merged = citiesWeather.map(cw => {
+                const aqiObj = citiesAQI.find(a => a.name === cw.name);
+                return {
+                    ...cw,
+                    aqi: aqiObj ? aqiObj.aqi : null
+                };
+            });
+
+            for (const city of merged) {
+                const icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `
+                        <div class="city">${city.name}</div>
+                        <div class="cloud">${getWeatherEmoji(city.code)}</div>
+                        <div class="temp">${city.temp}°</div>
+                        <div class="extra">
+                            ${currentMapMode === 'air' 
+                                ? (city.aqi ? 'AQI '+city.aqi : '--') 
+                                : '☁️ '+city.cloud+'%'}
+                        </div>
+                    `,
+                    iconSize: [72, 72],
+                    iconAnchor: [36, 36]
+                });
+                const marker = L.marker([city.lat, city.lon], { icon }).addTo(mapInstance);
+                mapMarkers.push(marker);
+            }
+        }
+
+        // ============================================================
+        //  地图模式切换
+        // ============================================================
+        function updateMapMode(mode) {
+            currentMapMode = mode;
+            document.querySelectorAll('.map-tabs button').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.map === mode);
+            });
+            renderMap();
+        }
+
+        // ============================================================
+        //  导航 & 滚动
         // ============================================================
         function setupNavScroll() {
             const links = document.querySelectorAll('.nav-item a[data-target]');
@@ -1457,10 +1408,7 @@
                     e.preventDefault();
                     const target = link.dataset.target;
                     const el = document.getElementById(target);
-                    if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                    // 高亮
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     document.querySelectorAll('.nav-item > a').forEach(a => a.classList.remove('active'));
                     const parent = link.closest('.nav-item');
                     if (parent) {
@@ -1470,7 +1418,6 @@
                 });
             });
 
-            // 滚动监听自动高亮 (简化)
             const sections = document.querySelectorAll('section[id]');
             window.addEventListener('scroll', () => {
                 let current = '';
@@ -1485,58 +1432,32 @@
         }
 
         // ============================================================
-        //  地图切换
+        //  地图切换事件
         // ============================================================
         document.querySelectorAll('.map-tabs button').forEach(btn => {
             btn.addEventListener('click', () => {
                 const mode = btn.dataset.map;
                 updateMapMode(mode);
-                // 重新渲染地图数据
-                if (window._lastWeather && window._lastWeather.current) {
-                    renderMap(window._lastWeather, window._lastAir);
-                }
             });
         });
 
         // ============================================================
-        //  初始化
+        //  初始化 & 定时刷新 (每10分钟)
         // ============================================================
         async function init() {
             await renderAll();
-            // 存数据用于地图切换
-            const result = await fetchWeather();
-            if (result) {
-                window._lastWeather = result.weather;
-                window._lastAir = result.air;
-            }
-            // 每 10 分钟刷新
             setInterval(async () => {
-                const r = await fetchWeather();
-                if (r) {
-                    window._lastWeather = r.weather;
-                    window._lastAir = r.air;
-                    await renderAll();
-                }
+                await renderAll();
             }, 600000);
         }
 
-        // 确保地图容器在切换tab时重新调整
-        document.querySelectorAll('.map-tabs button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                setTimeout(() => {
-                    if (mapInstance) mapInstance.invalidateSize();
-                }, 300);
-            });
+        window.addEventListener('resize', () => {
+            if (mapInstance) setTimeout(() => mapInstance.invalidateSize(), 300);
         });
 
-        // 启动
         init().catch(console.error);
 
-        // 暴露给全局用于调试
-        window._rain = rain;
-
-        console.log('🌤 秦皇岛天气已启动 | Open-Meteo API | 高级感设计');
+        console.log('🌤 秦皇岛天气已启动 | 地图: Esri 街道 | 空气质量: WAQI (Token已配置)');
     </script>
-
 </body>
 </html>
