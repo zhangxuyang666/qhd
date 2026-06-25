@@ -1,1218 +1,612 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>秦皇岛 · 精致天气</title>
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>苹果风格天气预报</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        glass: 'rgba(255,255,255,0.15)',
+                        glassDark: 'rgba(0,0,0,0.25)',
+                        textLight: 'rgba(255,255,255,0.9)',
+                        textMute: 'rgba(255,255,255,0.65)'
+                    },
+                    backdropBlur: {
+                        xs: '4px',
+                    }
+                }
+            }
+        }
     </script>
-    <!-- Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-    </script>
-
-    <style>
-        /* ===== 全局重置 & 字体 ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass {
+                background: rgba(255,255,255,0.12);
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid rgba(255,255,255,0.18);
+            }
+            .glass-dark {
+                background: rgba(0,0,0,0.2);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid rgba(255,255,255,0.1);
+            }
+            .scroll-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scroll-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .weather-gradient-sunny {
+                background: linear-gradient(160deg, #4facfe 0%, #00f2fe 100%);
+            }
+            .weather-gradient-cloud {
+                background: linear-gradient(160deg, #89a0c2 0%, #b4c6e0 100%);
+            }
+            .weather-gradient-rain {
+                background: linear-gradient(160deg, #414345 0%, #232526 100%);
+            }
+            .weather-gradient-snow {
+                background: linear-gradient(160deg, #e0eafc 0%, #cfdef3 100%);
+            }
+            .card-expand {
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.4s ease;
+            }
+            .card-expand.open {
+                max-height: 300px;
+            }
+            .dropdown-menu {
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(-10px);
+                transition: all 0.25s ease;
+            }
+            .dropdown-menu.show {
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0);
+            }
+            .card-arrow {
+                transition: transform 0.3s ease !important;
+            }
         }
-
-        body {
-            min-height: 100vh;
-            background: #0c0f1c;
-            color: #f5f9ff;
-            padding: 0 16px 40px 16px;
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        /* 动态背景光效 */
-        body::before {
-            content: '';
-            position: fixed;
-            top: -20%;
-            left: -20%;
-            width: 80%;
-            height: 80%;
-            background: radial-gradient(circle, rgba(70, 130, 255, 0.12) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-            animation: aurora 15s ease-in-out infinite alternate;
-        }
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: -20%;
-            right: -10%;
-            width: 60%;
-            height: 60%;
-            background: radial-gradient(circle, rgba(255, 180, 60, 0.08) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-            animation: aurora2 20s ease-in-out infinite alternate;
-        }
-        @keyframes aurora {
-            0% { transform: translate(0,0) scale(1); }
-            100% { transform: translate(60px, 40px) scale(1.2); }
-        }
-        @keyframes aurora2 {
-            0% { transform: translate(0,0) scale(1); }
-            100% { transform: translate(-50px, -30px) scale(1.3); }
-        }
-
-        /* ===== 雨滴画布 ===== */
-        #rain-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-            opacity: 0;
-            transition: opacity 1.2s ease;
-        }
-        #rain-canvas.active {
-            opacity: 1;
-        }
-
-        /* ===== 主容器 ===== */
-        .app-wrapper {
-            position: relative;
-            z-index: 2;
-            max-width: 800px;
-            margin: 0 auto;
-            padding-top: 20px;
-        }
-
-        /* ===== 顶部标题 ===== */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 4px 16px 4px;
-        }
-        .city-name {
-            font-size: 28px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            background: linear-gradient(135deg, #fff 60%, #8ab4f8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .update-time {
-            font-size: 12px;
-            color: rgba(255,255,255,0.4);
-            background: rgba(255,255,255,0.06);
-            padding: 4px 14px;
-            border-radius: 30px;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        /* ===== 二级菜单（导航） ===== */
-        .nav-menu {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            padding: 10px 0 14px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.04);
-            margin-bottom: 20px;
-        }
-        .nav-item {
-            position: relative;
-        }
-        .nav-item > a {
-            display: inline-block;
-            padding: 6px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            color: rgba(255,255,255,0.5);
-            text-decoration: none;
-            border-radius: 30px;
-            transition: all 0.25s ease;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid transparent;
-        }
-        .nav-item > a:hover,
-        .nav-item > a.active {
-            color: #fff;
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.08);
-        }
-        .nav-item > a.active {
-            background: rgba(70, 130, 255, 0.2);
-            border-color: rgba(70, 130, 255, 0.2);
-        }
-
-        .dropdown {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            min-width: 140px;
-            background: rgba(22, 30, 46, 0.92);
-            backdrop-filter: blur(24px);
-            border-radius: 18px;
-            padding: 6px 0;
-            border: 1px solid rgba(255,255,255,0.06);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            z-index: 100;
-            margin-top: 6px;
-        }
-        .nav-item:hover .dropdown,
-        .nav-item:focus-within .dropdown {
-            display: block;
-        }
-        .dropdown a {
-            display: block;
-            padding: 8px 20px;
-            font-size: 13px;
-            color: rgba(255,255,255,0.7);
-            text-decoration: none;
-            transition: all 0.15s ease;
-            border-left: 2px solid transparent;
-        }
-        .dropdown a:hover {
-            background: rgba(255,255,255,0.04);
-            color: #fff;
-            border-left-color: #4688ff;
-            padding-left: 26px;
-        }
-
-        /* ===== 卡片通用 ===== */
-        .card {
-            background: rgba(255,255,255,0.04);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 28px;
-            border: 1px solid rgba(255,255,255,0.06);
-            box-shadow: 0 12px 48px rgba(0,0,0,0.25);
-            padding: 22px 20px;
-            margin-bottom: 18px;
-            transition: transform 0.2s ease, box-shadow 0.3s ease;
-        }
-        .card:hover {
-            box-shadow: 0 16px 56px rgba(0,0,0,0.35);
-        }
-        .card-title {
-            font-size: 13px;
-            font-weight: 500;
-            color: rgba(255,255,255,0.35);
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-            margin-bottom: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .card-title .badge {
-            font-size: 10px;
-            background: rgba(255,255,255,0.06);
-            padding: 2px 12px;
-            border-radius: 30px;
-            color: rgba(255,255,255,0.4);
-            font-weight: 400;
-        }
-
-        /* ===== 主天气卡片 ===== */
-        .weather-main {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 28px 24px;
-        }
-        .weather-main .top-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .weather-main .temp-now {
-            font-size: 72px;
-            font-weight: 300;
-            letter-spacing: -4px;
-            line-height: 1;
-            background: linear-gradient(135deg, #fff 50%, #8ab4f8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .weather-main .temp-now sup {
-            font-size: 30px;
-            font-weight: 300;
-            -webkit-text-fill-color: rgba(255,255,255,0.3);
-        }
-        .weather-main .weather-icon {
-            font-size: 64px;
-            line-height: 1;
-            filter: drop-shadow(0 4px 12px rgba(70,130,255,0.2));
-        }
-        .weather-main .desc-range {
-            display: flex;
-            align-items: baseline;
-            gap: 16px;
-            margin-top: 2px;
-        }
-        .weather-main .weather-desc {
-            font-size: 22px;
-            font-weight: 400;
-            color: rgba(255,255,255,0.8);
-        }
-        .weather-main .temp-range {
-            font-size: 16px;
-            color: rgba(255,255,255,0.4);
-            background: rgba(255,255,255,0.05);
-            padding: 2px 16px;
-            border-radius: 30px;
-        }
-
-        /* 详细指标网格 */
-        .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-top: 8px;
-        }
-        .detail-item {
-            background: rgba(255,255,255,0.02);
-            border-radius: 18px;
-            padding: 12px 8px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.02);
-        }
-        .detail-item .label {
-            font-size: 11px;
-            color: rgba(255,255,255,0.3);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .detail-item .value {
-            font-size: 18px;
-            font-weight: 500;
-            margin-top: 4px;
-            color: #fff;
-        }
-        .detail-item .value .unit {
-            font-size: 12px;
-            font-weight: 400;
-            color: rgba(255,255,255,0.3);
-            margin-left: 2px;
-        }
-        .detail-item .sub {
-            font-size: 12px;
-            color: rgba(255,255,255,0.3);
-            margin-top: 2px;
-        }
-
-        /* 空气质量卡片 */
-        .aqi-display {
-            display: flex;
-            align-items: center;
-            gap: 28px;
-            flex-wrap: wrap;
-        }
-        .aqi-big {
-            font-size: 56px;
-            font-weight: 300;
-            letter-spacing: -2px;
-            min-width: 80px;
-            line-height: 1.1;
-        }
-        .aqi-big .aqi-label {
-            font-size: 14px;
-            font-weight: 400;
-            color: rgba(255,255,255,0.3);
-            display: block;
-            margin-top: 2px;
-        }
-        .aqi-details {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px 28px;
-            flex: 1;
-        }
-        .aqi-details .aqi-item {
-            font-size: 14px;
-        }
-        .aqi-details .aqi-item .label {
-            color: rgba(255,255,255,0.25);
-        }
-        .aqi-details .aqi-item .val {
-            font-weight: 500;
-            margin-left: 4px;
-        }
-        .aqi-good { color: #4caf50; }
-        .aqi-moderate { color: #ffeb3b; }
-        .aqi-unhealthy-sensitive { color: #ff9800; }
-        .aqi-unhealthy { color: #f44336; }
-        .aqi-very-unhealthy { color: #9c27b0; }
-        .aqi-hazardous { color: #7c4d4d; }
-
-        /* 逐小时滚动 */
-        .hourly-scroll {
-            display: flex;
-            gap: 12px;
-            overflow-x: auto;
-            padding: 4px 2px 12px 2px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.08) transparent;
-            -webkit-overflow-scrolling: touch;
-        }
-        .hourly-scroll::-webkit-scrollbar {
-            height: 3px;
-        }
-        .hourly-scroll::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.12);
-            border-radius: 10px;
-        }
-        .hourly-item {
-            flex: 0 0 68px;
-            text-align: center;
-            padding: 10px 4px;
-            background: rgba(255,255,255,0.02);
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.03);
-            transition: background 0.2s ease;
-        }
-        .hourly-item:hover { background: rgba(255,255,255,0.06); }
-        .hourly-item .h-time {
-            font-size: 12px;
-            color: rgba(255,255,255,0.4);
-        }
-        .hourly-item .h-icon {
-            font-size: 28px;
-            margin: 4px 0;
-        }
-        .hourly-item .h-temp {
-            font-size: 17px;
-            font-weight: 500;
-        }
-        .hourly-item .h-pop {
-            font-size: 10px;
-            color: rgba(255,255,255,0.3);
-        }
-
-        /* 7日预报 */
-        .forecast-list {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .forecast-row {
-            display: grid;
-            grid-template-columns: 80px 1fr 60px 50px;
-            align-items: center;
-            padding: 8px 14px;
-            border-radius: 16px;
-            background: rgba(255,255,255,0.01);
-            transition: background 0.2s ease;
-            gap: 8px;
-        }
-        .forecast-row:hover {
-            background: rgba(255,255,255,0.03);
-        }
-        .forecast-row .f-day {
-            font-size: 15px;
-            font-weight: 500;
-            color: rgba(255,255,255,0.8);
-        }
-        .forecast-row .f-icon {
-            font-size: 24px;
-            text-align: center;
-        }
-        .forecast-row .f-temps {
-            display: flex;
-            justify-content: flex-end;
-            gap: 14px;
-            font-size: 16px;
-        }
-        .forecast-row .f-temps .high {
-            color: #ff8a7a;
-        }
-        .forecast-row .f-temps .low {
-            color: #7ab8ff;
-        }
-        .forecast-row .f-desc {
-            font-size: 12px;
-            color: rgba(255,255,255,0.35);
-            text-align: right;
-        }
-
-        /* 折线图 */
-        .chart-container {
-            position: relative;
-            height: 200px;
-            width: 100%;
-            margin-top: 4px;
-        }
-
-        /* 地图 */
-        .map-container {
-            position: relative;
-            height: 280px;
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.04);
-            margin-top: 6px;
-        }
-        .map-container .leaflet-control-attribution {
-            font-size: 8px !important;
-            background: rgba(0,0,0,0.3) !important;
-            color: rgba(255,255,255,0.3) !important;
-        }
-        .map-container .leaflet-control-attribution a {
-            color: rgba(255,255,255,0.4) !important;
-        }
-
-        .map-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-        .map-tabs button {
-            flex: 1;
-            padding: 8px 0;
-            border: none;
-            border-radius: 30px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            background: rgba(255,255,255,0.02);
-            color: rgba(255,255,255,0.4);
-            transition: all 0.25s ease;
-            border: 1px solid transparent;
-            backdrop-filter: blur(4px);
-        }
-        .map-tabs button.active {
-            background: rgba(70,130,255,0.15);
-            color: #fff;
-            border-color: rgba(70,130,255,0.15);
-        }
-        .map-tabs button:hover {
-            background: rgba(255,255,255,0.06);
-            color: #fff;
-        }
-
-        /* 自定义地图标记 */
-        .custom-marker {
-            background: rgba(12, 15, 28, 0.8);
-            backdrop-filter: blur(12px);
-            border-radius: 16px;
-            padding: 6px 12px;
-            border: 1px solid rgba(255,255,255,0.08);
-            color: #fff;
-            font-size: 11px;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            min-width: 64px;
-        }
-        .custom-marker .city {
-            font-weight: 600;
-            font-size: 12px;
-        }
-        .custom-marker .cloud {
-            font-size: 20px;
-        }
-        .custom-marker .temp {
-            font-size: 15px;
-            font-weight: 400;
-        }
-        .custom-marker .extra {
-            font-size: 10px;
-            color: rgba(255,255,255,0.5);
-        }
-
-        /* 综合数据卡片 */
-        .more-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 12px;
-            padding: 4px 0;
-        }
-        .more-item {
-            text-align: center;
-        }
-        .more-item .label {
-            font-size: 11px;
-            color: rgba(255,255,255,0.3);
-            text-transform: uppercase;
-        }
-        .more-item .value {
-            font-size: 18px;
-            font-weight: 500;
-            margin-top: 4px;
-        }
-
-        /* 响应式 */
-        @media (max-width: 640px) {
-            body { padding: 0 12px 30px 12px; }
-            .city-name { font-size: 24px; }
-            .weather-main .temp-now { font-size: 58px; }
-            .weather-main .weather-icon { font-size: 50px; }
-            .weather-main .weather-desc { font-size: 18px; }
-            .detail-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-            .detail-item .value { font-size: 16px; }
-            .aqi-big { font-size: 46px; }
-            .aqi-details { gap: 8px 16px; }
-            .aqi-details .aqi-item { font-size: 12px; }
-            .forecast-row { grid-template-columns: 60px 1fr 50px 40px; font-size: 13px; padding: 6px 10px; }
-            .forecast-row .f-day { font-size: 13px; }
-            .forecast-row .f-icon { font-size: 20px; }
-            .forecast-row .f-temps { font-size: 14px; }
-            .map-container { height: 200px; }
-            .card { padding: 18px 14px; border-radius: 22px; }
-            .weather-main { padding: 20px 16px; }
-            .hourly-item { flex: 0 0 60px; }
-            .hourly-item .h-icon { font-size: 22px; }
-            .hourly-item .h-temp { font-size: 15px; }
-            .chart-container { height: 160px; }
-            .nav-item > a { font-size: 12px; padding: 4px 12px; }
-            .dropdown { min-width: 120px; }
-        }
-        @media (max-width: 420px) {
-            .detail-grid { grid-template-columns: repeat(2, 1fr); }
-            .detail-grid .detail-item:nth-child(5) { grid-column: 1 / -1; }
-            .detail-grid .detail-item:nth-child(6) { grid-column: 1 / -1; }
-            .forecast-row { grid-template-columns: 50px 1fr 40px 35px; font-size: 12px; }
-            .weather-main .temp-now { font-size: 48px; }
-            .weather-main .weather-icon { font-size: 42px; }
-            .aqi-display { flex-direction: column; align-items: flex-start; gap: 12px; }
-            .aqi-big { font-size: 40px; }
-        }
-
-        /* 工具类 */
-        .hidden { display: none !important; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
-        .mt-8 { margin-top: 8px; }
-        .mb-8 { margin-bottom: 8px; }
     </style>
 </head>
-<body>
-
-    <!-- ===== 雨滴画布 ===== -->
-    <canvas id="rain-canvas"></canvas>
-
-    <div class="app-wrapper">
-
-        <!-- ===== 顶部 ===== -->
-        <header class="header">
-            <span class="city-name">秦皇岛</span>
-            <span class="update-time" id="updateTime">更新中...</span>
-        </header>
-
-        <!-- ===== 二级菜单 ===== -->
-        <nav class="nav-menu" id="mainNav">
-            <div class="nav-item">
-                <a href="#section-current" class="active" data-target="section-current">🌤 实时</a>
-                <div class="dropdown">
-                    <a href="#section-current" data-target="section-current">📊 当前</a>
-                    <a href="#section-hourly" data-target="section-hourly">⏱ 逐小时</a>
-                    <a href="#section-forecast" data-target="section-forecast">📅 7日</a>
+<body class="weather-gradient-sunny min-h-screen text-textLight font-sans transition-all duration-700">
+    <!-- 导航栏 -->
+    <nav class="glass fixed top-0 left-0 right-0 z-50 px-4 py-3">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <h1 class="text-xl font-semibold flex items-center gap-2">
+                <i class="fa fa-cloud"></i> 天气
+            </h1>
+            <div class="flex items-center gap-4">
+                <!-- 城市搜索 -->
+                <div class="relative">
+                    <input id="cityInput" type="text" placeholder="输入城市切换" class="glass-dark rounded-full px-4 py-1.5 w-44 md:w-56 outline-none text-sm placeholder:text-textMute">
+                    <button id="searchBtn" class="absolute right-2 top-1/2 -translate-y-1/2 text-textMute hover:text-white">
+                        <i class="fa fa-search"></i>
+                    </button>
+                </div>
+                <!-- 更多下拉菜单 -->
+                <div class="relative">
+                    <button id="moreBtn" class="px-3 py-1 rounded-lg glass-dark hover:bg-white/20 transition">
+                        <i class="fa fa-ellipsis-h"></i> 更多
+                    </button>
+                    <div id="dropdownMenu" class="dropdown-menu absolute right-0 mt-2 w-40 glass rounded-xl p-2">
+                        <a href="#" id="menuRefresh" class="block px-3 py-2 rounded-lg hover:bg-white/10 text-sm">刷新天气</a>
+                        <a href="#" class="block px-3 py-2 rounded-lg hover:bg-white/10 text-sm">管理城市</a>
+                        <a href="#" id="menuUnit" class="block px-3 py-2 rounded-lg hover:bg-white/10 text-sm">温度单位切换</a>
+                        <a href="#" class="block px-3 py-2 rounded-lg hover:bg-white/10 text-sm">关于本应用</a>
+                    </div>
                 </div>
             </div>
-            <div class="nav-item">
-                <a href="#section-air" data-target="section-air">🌬 空气</a>
-                <div class="dropdown">
-                    <a href="#section-air" data-target="section-air">🧪 空气质量</a>
-                    <a href="#section-airmap" data-target="section-airmap">🗺 地图</a>
-                </div>
-            </div>
-            <div class="nav-item">
-                <a href="#section-cloudmap" data-target="section-cloudmap">☁️ 云层</a>
-                <div class="dropdown">
-                    <a href="#section-cloudmap" data-target="section-cloudmap">🗺 云图</a>
-                </div>
-            </div>
-            <div class="nav-item">
-                <a href="#section-chart" data-target="section-chart">📈 趋势</a>
-            </div>
-            <div class="nav-item">
-                <a href="#section-more" data-target="section-more">📌 更多</a>
-                <div class="dropdown">
-                    <a href="#section-more" data-target="section-more">💨 风力</a>
-                    <a href="#section-more" data-target="section-more">🌅 日出日落</a>
-                    <a href="#section-more" data-target="section-more">📊 气压</a>
-                    <a href="#section-more" data-target="section-more">☀️ 紫外线</a>
-                </div>
-            </div>
-        </nav>
+        </div>
+    </nav>
 
-        <!-- ===== 1. 实时天气 ===== -->
-        <section id="section-current" class="card weather-main">
-            <div class="top-row">
-                <span class="temp-now" id="currentTemp">--<sup>°</sup></span>
-                <span class="weather-icon" id="weatherIcon">🌤</span>
-            </div>
-            <div class="desc-range">
-                <span class="weather-desc" id="weatherDesc">加载中...</span>
-                <span class="temp-range" id="tempRange">-- / --</span>
-            </div>
-            <div class="detail-grid">
-                <div class="detail-item"><div class="label">体感温度</div><div class="value" id="feelsLike">--<span class="unit">°</span></div></div>
-                <div class="detail-item"><div class="label">风力</div><div class="value" id="windSpeed">--<span class="unit">km/h</span></div><div class="sub" id="windDir">--</div></div>
-                <div class="detail-item"><div class="label">紫外线</div><div class="value" id="uvIndex">--</div><div class="sub" id="uvLevel">--</div></div>
-                <div class="detail-item"><div class="label">日出 / 日落</div><div class="value" id="sunrise" style="font-size:15px;">--</div><div class="sub" id="sunset" style="font-size:15px;">--</div></div>
-                <div class="detail-item"><div class="label">气压</div><div class="value" id="pressure">--<span class="unit">hPa</span></div></div>
-                <div class="detail-item"><div class="label">湿度</div><div class="value" id="humidity">--<span class="unit">%</span></div></div>
-            </div>
-        </section>
+    <!-- 主内容容器 -->
+    <main class="pt-20 pb-10 px-4 max-w-7xl mx-auto">
+        <!-- Loading提示 -->
+        <div id="loadingTip" class="glass rounded-3xl p-6 text-center mt-6">
+            <i class="fa fa-spinner fa-spin text-4xl"></i>
+            <p class="mt-2 text-textMute">正在加载天气数据...</p>
+        </div>
 
-        <!-- ===== 2. 空气质量 ===== -->
-        <section id="section-air" class="card">
-            <div class="card-title">🌬 空气质量 <span class="badge" id="aqiLevel">--</span></div>
-            <div class="aqi-display">
-                <div class="aqi-big" id="aqiBig">--<span class="aqi-label">AQI</span></div>
-                <div class="aqi-details" id="aqiDetails">
-                    <div class="aqi-item"><span class="label">PM2.5</span> <span class="val" id="pm25">--</span></div>
-                    <div class="aqi-item"><span class="label">PM10</span> <span class="val" id="pm10">--</span></div>
-                    <div class="aqi-item"><span class="label">O₃</span> <span class="val" id="o3">--</span></div>
-                    <div class="aqi-item"><span class="label">NO₂</span> <span class="val" id="no2">--</span></div>
-                    <div class="aqi-item"><span class="label">SO₂</span> <span class="val" id="so2">--</span></div>
-                    <div class="aqi-item"><span class="label">CO</span> <span class="val" id="co">--</span></div>
+        <!-- 当前天气概览 -->
+        <section id="currentWeather" class="mt-6 glass rounded-3xl p-6 text-center hidden">
+            <h2 id="cityName" class="text-2xl font-medium">加载中...</h2>
+            <div class="my-6">
+                <div id="tempNow" class="text-7xl md:text-9xl font-light">--°</div>
+                <div id="weatherDesc" class="text-xl mt-2 text-textMute">正在获取天气</div>
+                <div class="mt-3 text-textMute">
+                    <span id="highLow">最高 --° / 最低 --°</span>
                 </div>
             </div>
         </section>
 
-        <!-- ===== 3. 逐小时 ===== -->
-        <section id="section-hourly" class="card">
-            <div class="card-title">⏱ 逐小时预报 <span class="badge">未来24h</span></div>
-            <div class="hourly-scroll" id="hourlyContainer"></div>
-        </section>
-
-        <!-- ===== 4. 7日预报 ===== -->
-        <section id="section-forecast" class="card">
-            <div class="card-title">📅 7日天气预报</div>
-            <div class="forecast-list" id="forecastContainer"></div>
-        </section>
-
-        <!-- ===== 5. 温度趋势 ===== -->
-        <section id="section-chart" class="card">
-            <div class="card-title">📈 温度趋势 <span class="badge">7日</span></div>
-            <div class="chart-container">
-                <canvas id="tempChart"></canvas>
+        <!-- 24小时横向滚动预报 -->
+        <section id="hourBox" class="mt-6 glass rounded-3xl p-5 hidden">
+            <h3 class="text-lg font-medium mb-4">24小时预报</h3>
+            <div id="hourWrap" class="flex gap-4 overflow-x-auto scroll-hide pb-2">
+                <!-- JS动态渲染小时卡片 -->
             </div>
         </section>
 
-        <!-- ===== 6. 地图 ===== -->
-        <section id="section-airmap" class="card">
-            <div class="card-title">🗺 天气地图</div>
-            <div class="map-tabs">
-                <button class="active" data-map="air">🌬 空气质量</button>
-                <button data-map="cloud">☁️ 云层</button>
-            </div>
-            <div class="map-container" id="mapContainer"></div>
-        </section>
-        <section id="section-cloudmap" class="card hidden"><!-- 共用地图 --></section>
-
-        <!-- ===== 7. 综合数据 ===== -->
-        <section id="section-more" class="card">
-            <div class="card-title">📌 综合数据</div>
-            <div class="more-grid">
-                <div class="more-item"><div class="label">💨 风力</div><div class="value" id="moreWind">--</div></div>
-                <div class="more-item"><div class="label">🌅 日出</div><div class="value" id="moreSunrise">--</div></div>
-                <div class="more-item"><div class="label">🌇 日落</div><div class="value" id="moreSunset">--</div></div>
-                <div class="more-item"><div class="label">📊 气压</div><div class="value" id="morePressure">--</div></div>
-                <div class="more-item"><div class="label">☀️ 紫外线</div><div class="value" id="moreUv">--</div></div>
+        <!-- 15天预报 -->
+        <section id="dayBox" class="mt-6 glass rounded-3xl p-5 hidden">
+            <h3 class="text-lg font-medium mb-4">15日天气预报</h3>
+            <div id="dayWrap" class="flex flex-col gap-3">
+                <!-- JS渲染15天 -->
             </div>
         </section>
 
-        <div style="height:10px;"></div>
-    </div>
+        <!-- 气象详情网格卡片 -->
+        <section id="detailBox" class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4 hidden">
+            <!-- 体感温度 -->
+            <div class="glass rounded-2xl p-4 cursor-pointer detail-card" data-type="feels">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-textMute text-sm"><i class="fa fa-thermometer-half mr-1"></i>体感温度</div>
+                        <div class="text-3xl font-light mt-2" id="feelsVal">--°</div>
+                    </div>
+                    <i class="fa fa-chevron-down text-textMute card-arrow transition-transform"></i>
+                </div>
+                <div class="card-expand mt-3 border-t border-white/10 pt-3">
+                    <p class="text-sm text-textMute">人体实际感知温度，受湿度、风力影响</p>
+                </div>
+            </div>
+            <!-- 降水概率 -->
+            <div class="glass rounded-2xl p-4 cursor-pointer detail-card" data-type="precip">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-textMute text-sm"><i class="fa fa-tint mr-1"></i>降水概率</div>
+                        <div class="text-3xl font-light mt-2" id="precipVal">--%</div>
+                    </div>
+                    <i class="fa fa-chevron-down text-textMute card-arrow transition-transform"></i>
+                </div>
+                <div class="card-expand mt-3 border-t border-white/10 pt-3">
+                    <p class="text-sm text-textMute">未来24小时降雨可能性</p>
+                </div>
+            </div>
+            <!-- AQI空气质量 -->
+            <div class="glass rounded-2xl p-4 cursor-pointer detail-card" data-type="aqi">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-textMute text-sm"><i class="fa fa-leaf mr-1"></i>空气质量</div>
+                        <div class="text-3xl font-light mt-2" id="aqiVal">--</div>
+                        <div class="text-sm text-textMute" id="aqiLevel">加载中</div>
+                    </div>
+                    <i class="fa fa-chevron-down text-textMute card-arrow transition-transform"></i>
+                </div>
+                <div class="card-expand mt-3 border-t border-white/10 pt-3">
+                    <p class="text-sm text-textMute" id="aqiDetail">正在请求空气质量数据</p>
+                </div>
+            </div>
+            <!-- 紫外线 -->
+            <div class="glass rounded-2xl p-4 cursor-pointer detail-card" data-type="uv">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-textMute text-sm"><i class="fa fa-sun-o mr-1"></i>紫外线指数</div>
+                        <div class="text-3xl font-light mt-2" id="uvVal">--</div>
+                    </div>
+                    <i class="fa fa-chevron-down text-textMute card-arrow transition-transform"></i>
+                </div>
+                <div class="card-expand mt-3 border-t border-white/10 pt-3">
+                    <p class="text-sm text-textMute" id="uvDesc">紫外线强度说明</p>
+                </div>
+            </div>
+            <!-- 风力风向 -->
+            <div class="glass rounded-2xl p-4 cursor-pointer detail-card" data-type="wind">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-textMute text-sm"><i class="fa fa-location-arrow mr-1"></i>风力</div>
+                        <div class="text-3xl font-light mt-2" id="windVal">-- km/h</div>
+                        <div class="text-sm text-textMute" id="windDir">风向 --</div>
+                    </div>
+                    <i class="fa fa-chevron-down text-textMute card-arrow transition-transform"></i>
+                </div>
+                <div class="card-expand mt-3 border-t border-white/10 pt-3">
+                    <p class="text-sm text-textMute">风速与风向等级参考</p>
+                </div>
+            </div>
+            <!-- 湿度 -->
+            <div class="glass rounded-2xl p-4 cursor-pointer detail-card" data-type="humidity">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-textMute text-sm"><i class="fa fa-tint mr-1"></i>空气湿度</div>
+                        <div class="text-3xl font-light mt-2" id="humVal">--%</div>
+                    </div>
+                    <i class="fa fa-chevron-down text-textMute card-arrow transition-transform"></i>
+                </div>
+                <div class="card-expand mt-3 border-t border-white/10 pt-3">
+                    <p class="text-sm text-textMute">舒适湿度区间40%-60%</p>
+                </div>
+            </div>
+            <!-- 能见度 -->
+            <div class="glass rounded-2xl p-4 cursor-pointer detail-card" data-type="vis">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-textMute text-sm"><i class="fa fa-eye mr-1"></i>能见度</div>
+                        <div class="text-3xl font-light mt-2" id="visVal">-- km</div>
+                    </div>
+                    <i class="fa fa-chevron-down text-textMute card-arrow transition-transform"></i>
+                </div>
+                <div class="card-expand mt-3 border-t border-white/10 pt-3">
+                    <p class="text-sm text-textMute">能见度越低，雾霾越严重</p>
+                </div>
+            </div>
+            <!-- 气压 -->
+            <div class="glass rounded-2xl p-4 cursor-pointer detail-card" data-type="press">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-textMute text-sm"><i class="fa fa-compress mr-1"></i>气压</div>
+                        <div class="text-3xl font-light mt-2" id="pressVal">-- hPa</div>
+                    </div>
+                    <i class="fa fa-chevron-down text-textMute card-arrow transition-transform"></i>
+                </div>
+                <div class="card-expand mt-3 border-t border-white/10 pt-3">
+                    <p class="text-sm text-textMute">标准大气压约1013hPa</p>
+                </div>
+            </div>
+            <!-- 日出日落 -->
+            <div class="glass rounded-2xl p-4 cursor-pointer detail-card" data-type="sun">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-textMute text-sm"><i class="fa fa-sunrise-o mr-1"></i>日出日落</div>
+                        <div class="text-xl font-light mt-2"><span id="sunrise">--:--</span> / <span id="sunset">--:--</span></div>
+                    </div>
+                    <i class="fa fa-chevron-down text-textMute card-arrow transition-transform"></i>
+                </div>
+                <div class="card-expand mt-3 border-t border-white/10 pt-3">
+                    <p class="text-sm text-textMute">白昼时长 <span id="dayLen">--</span></p>
+                </div>
+            </div>
+        </section>
+    </main>
 
     <script>
-        // ============================================================
-        //  ⚙️ 配置 — 您的 WAQI Token
-        // ============================================================
-        const WAQI_TOKEN = '59719da17098222846ba72f114c56a0870a9bb12';
+        // ========== 全局配置 ==========
+        const WAQI_TOKEN = "59719da17098222846ba72f114c56a0870a9bb12";
+        let currentCity = "北京";
+        let cityLat = 39.9042;
+        let cityLon = 116.4074;
+        let tempUnit = "c"; // c摄氏度 f华氏度
+        let weatherCache = null;
 
-        // ============================================================
-        //  常量 & 工具
-        // ============================================================
-        const LAT = 39.93;
-        const LON = 119.59;
-        const TIMEZONE = 'Asia/Shanghai';
-
-        const $ = (s) => document.querySelector(s);
-        const $$ = (s) => document.querySelectorAll(s);
-
-        function formatDateShort(iso) {
-            const d = new Date(iso);
-            return (d.getMonth()+1)+'/'+d.getDate();
-        }
-        function formatDate(iso) {
-            const d = new Date(iso);
-            return ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
-        }
-        function getWeatherEmoji(code) {
-            const map = {
-                0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',
-                51:'🌦',53:'🌧',55:'🌧',56:'🌧',57:'🌧',
-                61:'🌧',63:'🌧',65:'🌧',66:'🌧',67:'🌧',
-                71:'🌨',73:'🌨',75:'🌨',77:'🌨',
-                80:'🌧',81:'🌧',82:'🌧',85:'🌨',86:'🌨',
-                95:'⛈',96:'⛈',99:'⛈'
-            };
-            return map[code] || '🌤';
-        }
-        function getWeatherDesc(code) {
-            const map = {
-                0:'晴天',1:'晴间多云',2:'多云',3:'阴天',
-                45:'雾',48:'雾',51:'毛毛雨',53:'毛毛雨',55:'毛毛雨',
-                56:'冻雨',57:'冻雨',61:'小雨',63:'中雨',65:'大雨',
-                66:'冻雨',67:'冻雨',71:'小雪',73:'中雪',75:'大雪',
-                77:'雪粒',80:'阵雨',81:'阵雨',82:'阵雨',
-                85:'阵雪',86:'阵雪',95:'雷暴',96:'雷暴',99:'雷暴'
-            };
-            return map[code] || '未知';
-        }
-        function getAQILevel(aqi) {
-            if (aqi <= 50) return { label:'优', cls:'aqi-good' };
-            if (aqi <= 100) return { label:'良', cls:'aqi-moderate' };
-            if (aqi <= 150) return { label:'轻度污染', cls:'aqi-unhealthy-sensitive' };
-            if (aqi <= 200) return { label:'中度污染', cls:'aqi-unhealthy' };
-            if (aqi <= 300) return { label:'重度污染', cls:'aqi-very-unhealthy' };
-            return { label:'严重污染', cls:'aqi-hazardous' };
-        }
-        function getUVLevel(uv) {
-            if (uv < 3) return '低';
-            if (uv < 6) return '中';
-            if (uv < 8) return '高';
-            if (uv < 11) return '很高';
-            return '极高';
+        // DOM元素缓存
+        const els = {
+            loadingTip: document.getElementById("loadingTip"),
+            currentWeather: document.getElementById("currentWeather"),
+            hourBox: document.getElementById("hourBox"),
+            dayBox: document.getElementById("dayBox"),
+            detailBox: document.getElementById("detailBox"),
+            moreBtn: document.getElementById("moreBtn"),
+            dropdownMenu: document.getElementById("dropdownMenu"),
+            menuRefresh: document.getElementById("menuRefresh"),
+            menuUnit: document.getElementById("menuUnit"),
+            cityInput: document.getElementById("cityInput"),
+            searchBtn: document.getElementById("searchBtn"),
+            cityName: document.getElementById("cityName"),
+            tempNow: document.getElementById("tempNow"),
+            weatherDesc: document.getElementById("weatherDesc"),
+            highLow: document.getElementById("highLow"),
+            hourWrap: document.getElementById("hourWrap"),
+            dayWrap: document.getElementById("dayWrap"),
+            // 详情卡片值
+            feelsVal: document.getElementById("feelsVal"),
+            precipVal: document.getElementById("precipVal"),
+            aqiVal: document.getElementById("aqiVal"),
+            aqiLevel: document.getElementById("aqiLevel"),
+            aqiDetail: document.getElementById("aqiDetail"),
+            uvVal: document.getElementById("uvVal"),
+            uvDesc: document.getElementById("uvDesc"),
+            windVal: document.getElementById("windVal"),
+            windDir: document.getElementById("windDir"),
+            humVal: document.getElementById("humVal"),
+            visVal: document.getElementById("visVal"),
+            pressVal: document.getElementById("pressVal"),
+            sunrise: document.getElementById("sunrise"),
+            sunset: document.getElementById("sunset"),
+            dayLen: document.getElementById("dayLen"),
+            detailCards: document.querySelectorAll(".detail-card")
         }
 
-        // ============================================================
-        //  雨滴动效
-        // ============================================================
-        class RainEffect {
-            constructor(canvas) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.drops = [];
-                this.running = false;
-                this.animId = null;
-                this.resize();
-                window.addEventListener('resize', ()=>this.resize());
+        // ========== 下拉菜单交互 ==========
+        els.moreBtn.addEventListener("click", () => {
+            els.dropdownMenu.classList.toggle("show");
+        })
+        document.addEventListener("click", (e) => {
+            if (!els.moreBtn.contains(e.target) && !els.dropdownMenu.contains(e.target)) {
+                els.dropdownMenu.classList.remove("show");
             }
-            resize() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
-            }
-            start() {
-                if (this.running) return;
-                this.running = true;
-                this.drops = [];
-                const count = Math.floor((window.innerWidth * window.innerHeight) / 8000);
-                for (let i=0; i<Math.min(count, 120); i++) {
-                    this.drops.push({
-                        x: Math.random() * this.canvas.width,
-                        y: Math.random() * this.canvas.height - this.canvas.height,
-                        len: 8 + Math.random() * 14,
-                        speed: 8 + Math.random() * 14,
-                        width: 1 + Math.random() * 1.5,
-                        opacity: 0.3 + Math.random() * 0.4
-                    });
-                }
-                this.canvas.classList.add('active');
-                this.animate();
-            }
-            stop() {
-                this.running = false;
-                if (this.animId) cancelAnimationFrame(this.animId);
-                this.canvas.classList.remove('active');
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            }
-            animate() {
-                if (!this.running) return;
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                for (const d of this.drops) {
-                    d.y += d.speed;
-                    if (d.y > this.canvas.height) {
-                        d.y = -d.len - Math.random()*20;
-                        d.x = Math.random() * this.canvas.width;
-                    }
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(d.x, d.y);
-                    this.ctx.lineTo(d.x - d.len*0.2, d.y + d.len);
-                    this.ctx.strokeStyle = `rgba(180, 210, 255, ${d.opacity * 0.5})`;
-                    this.ctx.lineWidth = d.width;
-                    this.ctx.stroke();
-                }
-                this.animId = requestAnimationFrame(()=>this.animate());
-            }
+        })
+        // 菜单功能绑定
+        els.menuRefresh.addEventListener("click", (e) => {
+            e.preventDefault();
+            refreshAllData();
+            els.dropdownMenu.classList.remove("show");
+        })
+        els.menuUnit.addEventListener("click", (e) => {
+            e.preventDefault();
+            tempUnit = tempUnit === "c" ? "f" : "c";
+            if(weatherCache) renderAllWeather(weatherCache);
+            els.dropdownMenu.classList.remove("show");
+        })
+
+        // ========== 卡片展开收起 ==========
+        els.detailCards.forEach(card => {
+            card.addEventListener("click", () => {
+                const panel = card.querySelector(".card-expand");
+                const arrow = card.querySelector(".card-arrow");
+                panel.classList.toggle("open");
+                arrow.style.transform = panel.classList.contains("open") ? "rotate(180deg)" : "rotate(0)";
+            })
+        })
+
+        // ========== 单位转换工具 ==========
+        function c2f(c) {
+            return Math.round(c * 1.8 + 32);
+        }
+        function getTempStr(c) {
+            return tempUnit === "c" ? `${c}°` : `${c2f(c)}°F`;
         }
 
-        // ============================================================
-        //  数据获取
-        // ============================================================
-        async function fetchOpenMeteo() {
-            const url =
-                `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,uv_index,pressure_msl&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=${TIMEZONE}&forecast_days=7`;
-            const resp = await fetch(url);
-            if (!resp.ok) throw new Error('Open-Meteo 请求失败');
-            return await resp.json();
+        // ========== 页面刷新总入口 ==========
+        async function refreshAllData() {
+            els.loadingTip.classList.remove("hidden");
+            els.currentWeather.classList.add("hidden");
+            els.hourBox.classList.add("hidden");
+            els.dayBox.classList.add("hidden");
+            els.detailBox.classList.add("hidden");
+            await Promise.all([loadWeather(), loadAQI()]);
         }
 
-        async function fetchWAQI(lat, lon) {
-            if (!WAQI_TOKEN || WAQI_TOKEN === 'YOUR_WAQI_TOKEN_HERE') return null;
-            const url = `https://api.waqi.info/feed/geo:${lat};${lon}/?token=${WAQI_TOKEN}`;
-            const resp = await fetch(url);
-            if (!resp.ok) throw new Error('WAQI 请求失败');
-            const data = await resp.json();
-            if (data.status !== 'ok') throw new Error('WAQI 返回错误');
-            return data.data;
-        }
-
-        async function fetchCitiesWeather() {
-            const cities = [
-                { name:'秦皇岛', lat:39.93, lon:119.59 },
-                { name:'北京', lat:39.90, lon:116.40 },
-                { name:'天津', lat:39.13, lon:117.20 },
-                { name:'唐山', lat:39.63, lon:118.10 },
-                { name:'承德', lat:40.97, lon:117.93 },
-                { name:'锦州', lat:41.10, lon:121.15 },
-                { name:'葫芦岛', lat:40.71, lon:120.83 },
-                { name:'大连', lat:38.92, lon:121.64 }
-            ];
-            const results = [];
-            for (const city of cities) {
-                try {
-                    const url =
-                        `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code,cloudcover&timezone=${TIMEZONE}`;
-                    const resp = await fetch(url);
-                    if (!resp.ok) continue;
-                    const data = await resp.json();
-                    results.push({
-                        ...city,
-                        temp: Math.round(data.current.temperature_2m),
-                        code: data.current.weather_code,
-                        cloud: Math.round(data.current.cloudcover || 50)
-                    });
-                } catch(e) { console.warn('获取城市天气失败:', city.name); }
-            }
-            return results;
-        }
-
-        async function fetchCitiesAQI(cities) {
-            const results = [];
-            for (const city of cities) {
-                try {
-                    if (!WAQI_TOKEN || WAQI_TOKEN === 'YOUR_WAQI_TOKEN_HERE') break;
-                    const url = `https://api.waqi.info/feed/geo:${city.lat};${city.lon}/?token=${WAQI_TOKEN}`;
-                    const resp = await fetch(url);
-                    if (!resp.ok) continue;
-                    const data = await resp.json();
-                    if (data.status === 'ok') results.push({ ...city, aqi: data.data.aqi });
-                    else results.push({ ...city, aqi: null });
-                } catch(e) { results.push({ ...city, aqi: null }); }
-            }
-            return results;
-        }
-
-        // ============================================================
-        //  渲染
-        // ============================================================
-        let rain = null;
-        let chartInstance = null;
-        let mapInstance = null;
-        let mapMarkers = [];
-        let currentMapMode = 'air';
-
-        (function initRain() {
-            const canvas = document.getElementById('rain-canvas');
-            rain = new RainEffect(canvas);
-        })();
-
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('updateTime').textContent = '🔄 ' +
-                now.getHours().toString().padStart(2,'0')+':'+
-                now.getMinutes().toString().padStart(2,'0');
-        }
-        updateClock();
-        setInterval(updateClock, 30000);
-
-        async function renderAll() {
+        // ========== 城市搜索逻辑 ==========
+        els.searchBtn.addEventListener("click", searchCity);
+        els.cityInput.addEventListener("keydown", e => e.key === "Enter" && searchCity());
+        async function searchCity() {
+            const rawCity = els.cityInput.value.trim();
+            // 过滤空字符、全空格
+            const city = rawCity.replace(/\s+/g,"");
+            if (!city) return alert("请输入有效城市名称");
+            currentCity = city;
             try {
-                const weather = await fetchOpenMeteo();
-                let aqiData = null;
-                try { aqiData = await fetchWAQI(LAT, LON); } catch(e) { console.warn('WAQI获取失败'); }
-
-                const current = weather.current;
-                const daily = weather.daily;
-                const hourly = weather.hourly;
-
-                // ---- 主天气 ----
-                document.getElementById('currentTemp').innerHTML = Math.round(current.temperature_2m) + '<sup>°</sup>';
-                document.getElementById('weatherIcon').textContent = getWeatherEmoji(current.weather_code);
-                document.getElementById('weatherDesc').textContent = getWeatherDesc(current.weather_code);
-                if (daily && daily.temperature_2m_max && daily.temperature_2m_max.length>0) {
-                    const high = Math.round(daily.temperature_2m_max[0]);
-                    const low = Math.round(daily.temperature_2m_min[0]);
-                    document.getElementById('tempRange').textContent = high + '° / ' + low + '°';
+                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=zh`);
+                const geoData = await geoRes.json();
+                if (!geoData.results?.length) {
+                    alert("未找到该城市，请重新输入");
+                    return;
                 }
-                document.getElementById('feelsLike').innerHTML = Math.round(current.apparent_temperature) + '<span class="unit">°</span>';
-                document.getElementById('windSpeed').innerHTML = Math.round(current.wind_speed_10m) + '<span class="unit"> km/h</span>';
-                document.getElementById('windDir').textContent = current.wind_direction_10m + '°';
-                document.getElementById('uvIndex').textContent = current.uv_index.toFixed(1);
-                document.getElementById('uvLevel').textContent = getUVLevel(current.uv_index);
-                document.getElementById('pressure').innerHTML = Math.round(current.pressure_msl) + '<span class="unit"> hPa</span>';
-                document.getElementById('humidity').innerHTML = Math.round(current.relative_humidity_2m) + '<span class="unit">%</span>';
-
-                if (daily && daily.sunrise && daily.sunrise.length>0) {
-                    const sr = new Date(daily.sunrise[0]);
-                    const ss = new Date(daily.sunset[0]);
-                    const srStr = sr.getHours().toString().padStart(2,'0')+':'+sr.getMinutes().toString().padStart(2,'0');
-                    const ssStr = ss.getHours().toString().padStart(2,'0')+':'+ss.getMinutes().toString().padStart(2,'0');
-                    document.getElementById('sunrise').textContent = srStr;
-                    document.getElementById('sunset').textContent = ssStr;
-                    document.getElementById('moreSunrise').textContent = srStr;
-                    document.getElementById('moreSunset').textContent = ssStr;
-                }
-
-                document.getElementById('moreWind').textContent = Math.round(current.wind_speed_10m) + ' km/h';
-                document.getElementById('morePressure').textContent = Math.round(current.pressure_msl) + ' hPa';
-                document.getElementById('moreUv').textContent = current.uv_index.toFixed(1);
-
-                // 雨滴
-                const rainCodes = [51,53,55,56,57,61,63,65,66,67,80,81,82];
-                if (rainCodes.includes(current.weather_code)) rain.start();
-                else rain.stop();
-
-                // ---- 空气质量 ----
-                if (aqiData) {
-                    const aqi = aqiData.aqi || 0;
-                    const level = getAQILevel(aqi);
-                    document.getElementById('aqiBig').innerHTML = Math.round(aqi) + '<span class="aqi-label">AQI</span>';
-                    document.getElementById('aqiLevel').textContent = level.label;
-                    document.getElementById('aqiLevel').className = 'badge ' + level.cls;
-                    document.getElementById('aqiBig').className = 'aqi-big ' + level.cls;
-                    const iaqi = aqiData.iaqi || {};
-                    document.getElementById('pm25').textContent = (iaqi.pm25 ? iaqi.pm25.v : '--') + ' µg';
-                    document.getElementById('pm10').textContent = (iaqi.pm10 ? iaqi.pm10.v : '--') + ' µg';
-                    document.getElementById('o3').textContent = (iaqi.o3 ? iaqi.o3.v : '--') + ' µg';
-                    document.getElementById('no2').textContent = (iaqi.no2 ? iaqi.no2.v : '--') + ' µg';
-                    document.getElementById('so2').textContent = (iaqi.so2 ? iaqi.so2.v : '--') + ' µg';
-                    document.getElementById('co').textContent = (iaqi.co ? iaqi.co.v : '--') + ' µg';
-                } else {
-                    document.getElementById('aqiBig').innerHTML = '--<span class="aqi-label">AQI</span>';
-                    document.getElementById('aqiLevel').textContent = '无数据';
-                    ['pm25','pm10','o3','no2','so2','co'].forEach(id => document.getElementById(id).textContent = '--');
-                }
-
-                // ---- 逐小时 ----
-                const hourlyContainer = document.getElementById('hourlyContainer');
-                hourlyContainer.innerHTML = '';
-                const now = new Date();
-                const currentHour = now.getHours();
-                let startIdx = 0;
-                if (hourly && hourly.time) {
-                    for (let i=0; i<hourly.time.length; i++) {
-                        const h = new Date(hourly.time[i]);
-                        if (h.getHours() === currentHour && h.getDate() === now.getDate()) { startIdx = i; break; }
-                    }
-                    for (let i=startIdx; i<Math.min(startIdx+24, hourly.time.length); i++) {
-                        const t = new Date(hourly.time[i]);
-                        const temp = Math.round(hourly.temperature_2m[i]);
-                        const code = hourly.weather_code[i];
-                        const pop = hourly.precipitation_probability ? Math.round(hourly.precipitation_probability[i]) : 0;
-                        const div = document.createElement('div');
-                        div.className = 'hourly-item';
-                        div.innerHTML = `
-                            <div class="h-time">${t.getHours().toString().padStart(2,'0')}:00</div>
-                            <div class="h-icon">${getWeatherEmoji(code)}</div>
-                            <div class="h-temp">${temp}°</div>
-                            <div class="h-pop">${pop}%</div>
-                        `;
-                        hourlyContainer.appendChild(div);
-                    }
-                }
-
-                // ---- 7日预报 ----
-                const forecastContainer = document.getElementById('forecastContainer');
-                forecastContainer.innerHTML = '';
-                if (daily && daily.time) {
-                    for (let i=0; i<Math.min(7, daily.time.length); i++) {
-                        const date = new Date(daily.time[i]);
-                        const high = Math.round(daily.temperature_2m_max[i]);
-                        const low = Math.round(daily.temperature_2m_min[i]);
-                        const code = daily.weather_code[i];
-                        const dayLabel = i===0 ? '今天' : formatDate(daily.time[i]);
-                        const div = document.createElement('div');
-                        div.className = 'forecast-row';
-                        div.innerHTML = `
-                            <div class="f-day">${dayLabel} ${formatDateShort(daily.time[i])}</div>
-                            <div class="f-icon">${getWeatherEmoji(code)}</div>
-                            <div class="f-temps"><span class="high">${high}°</span><span class="low">${low}°</span></div>
-                            <div class="f-desc">${getWeatherDesc(code)}</div>
-                        `;
-                        forecastContainer.appendChild(div);
-                    }
-                }
-
-                // ---- 折线图 ----
-                if (daily && daily.time && daily.time.length >= 7) {
-                    const labels = daily.time.map(d => formatDateShort(d));
-                    const highs = daily.temperature_2m_max.map(v => Math.round(v));
-                    const lows = daily.temperature_2m_min.map(v => Math.round(v));
-                    const ctx = document.getElementById('tempChart').getContext('2d');
-                    if (chartInstance) chartInstance.destroy();
-                    chartInstance = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels,
-                            datasets: [
-                                { label:'最高温', data:highs, borderColor:'#ff8a7a', backgroundColor:'rgba(255,138,122,0.1)',
-                                    tension:0.3, pointBackgroundColor:'#ff8a7a', pointRadius:4, fill:true },
-                                { label:'最低温', data:lows, borderColor:'#7ab8ff', backgroundColor:'rgba(122,184,255,0.1)',
-                                    tension:0.3, pointBackgroundColor:'#7ab8ff', pointRadius:4, fill:true }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { labels: { color:'rgba(255,255,255,0.5)', font:{size:11} } } },
-                            scales: {
-                                x: { ticks:{ color:'rgba(255,255,255,0.3)', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.04)' } },
-                                y: { ticks:{ color:'rgba(255,255,255,0.3)', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.04)' } }
-                            },
-                            interaction: { intersect: false, mode:'index' }
-                        }
-                    });
-                }
-
-                // ---- 地图 ----
-                await renderMap();
-
-                // ---- 导航高亮 ----
-                setupNavScroll();
-
+                const loc = geoData.results[0];
+                cityLat = loc.latitude;
+                cityLon = loc.longitude;
+                els.cityName.innerText = loc.name;
+                refreshAllData();
             } catch(err) {
-                console.error('渲染失败:', err);
+                console.error("城市定位失败", err);
+                alert("网络请求失败，请检查网络后重试");
             }
         }
 
-        // ============================================================
-        //  地图
-        // ============================================================
-        async function renderMap() {
-            const container = document.getElementById('mapContainer');
-            if (!mapInstance) {
-                mapInstance = L.map(container, {
-                    center: [LAT, LON],
-                    zoom: 8,
-                    zoomControl: false,
-                    attributionControl: true
-                });
-                // OpenStreetMap 暗色风格
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '©OpenStreetMap, ©CartoDB',
-                    maxZoom: 19,
-                    minZoom: 4
-                }).addTo(mapInstance);
-                L.control.zoom({ position:'bottomright' }).addTo(mapInstance);
-            } else {
-                mapInstance.invalidateSize();
-            }
-
-            mapMarkers.forEach(m => mapInstance.removeLayer(m));
-            mapMarkers = [];
-
-            const citiesWeather = await fetchCitiesWeather();
-            let citiesAQI = [];
-            if (WAQI_TOKEN && WAQI_TOKEN !== 'YOUR_WAQI_TOKEN_HERE') {
-                citiesAQI = await fetchCitiesAQI(citiesWeather);
-            }
-            const merged = citiesWeather.map(cw => {
-                const aqiObj = citiesAQI.find(a => a.name === cw.name);
-                return { ...cw, aqi: aqiObj ? aqiObj.aqi : null };
-            });
-
-            for (const city of merged) {
-                const icon = L.divIcon({
-                    className: 'custom-marker',
-                    html: `
-                        <div class="city">${city.name}</div>
-                        <div class="cloud">${getWeatherEmoji(city.code)}</div>
-                        <div class="temp">${city.temp}°</div>
-                        <div class="extra">${currentMapMode==='air' ? (city.aqi ? 'AQI '+city.aqi : '--') : '☁️ '+city.cloud+'%'}</div>
-                    `,
-                    iconSize: [72,72],
-                    iconAnchor: [36,36]
-                });
-                const marker = L.marker([city.lat, city.lon], { icon }).addTo(mapInstance);
-                mapMarkers.push(marker);
+        // ========== 加载气象数据 OpenMeteo ==========
+        async function loadWeather() {
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${cityLat}&longitude=${cityLon}&current=temperature_2m,relative_humidity,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,uv_index,pressure_msl,visibility&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_probability_max&timezone=auto`;
+                const res = await fetch(url);
+                const data = await res.json();
+                weatherCache = data;
+                renderAllWeather(data);
+                setBgByWeather(data.current.weather_code);
+                // 展示内容区域，隐藏加载
+                els.loadingTip.classList.add("hidden");
+                els.currentWeather.classList.remove("hidden");
+                els.hourBox.classList.remove("hidden");
+                els.dayBox.classList.remove("hidden");
+                els.detailBox.classList.remove("hidden");
+            } catch(e) {
+                console.error("天气加载失败", e);
+                alert("气象数据加载失败，请刷新重试");
             }
         }
-
-        function updateMapMode(mode) {
-            currentMapMode = mode;
-            document.querySelectorAll('.map-tabs button').forEach(btn => btn.classList.toggle('active', btn.dataset.map === mode));
-            renderMap();
+        // 统一渲染入口
+        function renderAllWeather(data) {
+            renderCurrent(data.current, data.daily);
+            renderHourly(data.hourly);
+            renderDaily(data.daily);
+            renderDetail(data.current, data.daily);
         }
 
-        // ============================================================
-        //  导航
-        // ============================================================
-        function setupNavScroll() {
-            const links = document.querySelectorAll('.nav-item a[data-target]');
-            links.forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const target = link.dataset.target;
-                    const el = document.getElementById(target);
-                    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
-                    document.querySelectorAll('.nav-item > a').forEach(a => a.classList.remove('active'));
-                    const parent = link.closest('.nav-item');
-                    if (parent) {
-                        const mainLink = parent.querySelector('a[data-target]');
-                        if (mainLink) mainLink.classList.add('active');
-                    }
-                });
-            });
-            const sections = document.querySelectorAll('section[id]');
-            window.addEventListener('scroll', ()=>{
-                let current = '';
-                sections.forEach(sec => {
-                    const rect = sec.getBoundingClientRect();
-                    if (rect.top <= 120) current = sec.id;
-                });
-                document.querySelectorAll('.nav-item > a[data-target]').forEach(a => {
-                    a.classList.toggle('active', a.dataset.target === current);
-                });
-            }, { passive:true });
+        // 渲染当前天气总览
+        function renderCurrent(cur, daily) {
+            const temp = Math.round(cur.temperature_2m);
+            els.tempNow.innerText = getTempStr(temp);
+            const wDesc = getWeatherText(cur.weather_code);
+            els.weatherDesc.innerText = wDesc;
+            const high = Math.round(daily.temperature_2m_max[0]);
+            const low = Math.round(daily.temperature_2m_min[0]);
+            els.highLow.innerText = `最高 ${getTempStr(high)} / 最低 ${getTempStr(low)}`;
         }
 
-        // ============================================================
-        //  事件绑定
-        // ============================================================
-        document.querySelectorAll('.map-tabs button').forEach(btn => {
-            btn.addEventListener('click', ()=>{
-                updateMapMode(btn.dataset.map);
-            });
-        });
-
-        window.addEventListener('resize', ()=>{
-            if (mapInstance) setTimeout(()=>mapInstance.invalidateSize(), 300);
-        });
-
-        // ============================================================
-        //  启动
-        // ============================================================
-        async function init() {
-            await renderAll();
-            setInterval(async ()=>{
-                await renderAll();
-            }, 600000);
+        // 24小时横向预报
+        function renderHourly(hour) {
+            els.hourWrap.innerHTML = "";
+            const hourTimes = hour.time.map(t => new Date(t));
+            for(let i=0; i<24; i++) {
+                const time = hourTimes[i];
+                const h = time.getHours();
+                const temp = Math.round(hour.temperature_2m[i]);
+                const prob = hour.precipitation_probability[i] ?? 0;
+                const code = hour.weather_code[i];
+                const item = document.createElement("div");
+                item.className = "flex flex-col items-center min-w-[70px]";
+                item.innerHTML = `
+                    <span class="text-sm text-textMute">${h}时</span>
+                    <i class="fa ${getWeatherIcon(code)} text-xl my-2"></i>
+                    <span class="font-medium">${getTempStr(temp)}</span>
+                    <span class="text-xs text-blue-300">${prob}%</span>
+                `;
+                els.hourWrap.appendChild(item);
+            }
         }
-        init().catch(console.error);
-        console.log('🌤 秦皇岛天气 · 精致版');
+
+        // 15天预报列表（修复温度条硬编码）
+        function renderDaily(daily) {
+            els.dayWrap.innerHTML = "";
+            // 计算全局最大最小温度，动态进度条
+            let allMax = -999;
+            let allMin = 999;
+            for(let i=0;i<15;i++){
+                allMax = Math.max(allMax, daily.temperature_2m_max[i]);
+                allMin = Math.min(allMin, daily.temperature_2m_min[i]);
+            }
+            const totalRange = allMax - allMin || 1;
+
+            for(let i=0; i<15; i++) {
+                const date = new Date(daily.time[i]);
+                const week = ["周日","周一","周二","周三","周四","周五","周六"][date.getDay()];
+                const maxT = Math.round(daily.temperature_2m_max[i]);
+                const minT = Math.round(daily.temperature_2m_min[i]);
+                const code = daily.weather_code[i];
+                const leftPercent = ((minT - allMin) / totalRange) * 100;
+                const widthPercent = ((maxT - minT) / totalRange) * 100;
+                const item = document.createElement("div");
+                item.className = "flex items-center justify-between py-2 border-b border-white/10";
+                item.innerHTML = `
+                    <div class="w-24">${i===0 ? "今天" : week}</div>
+                    <i class="fa ${getWeatherIcon(code)} w-8 text-center"></i>
+                    <div class="flex-1 mx-3 h-1 bg-white/20 rounded-full relative overflow-hidden">
+                        <div class="absolute h-full bg-white/40 rounded-full" style="left:${leftPercent}%;width:${widthPercent}%"></div>
+                    </div>
+                    <div class="w-20 text-right">${getTempStr(minT)} / ${getTempStr(maxT)}</div>
+                `;
+                els.dayWrap.appendChild(item);
+            }
+        }
+
+        // 气象详情卡片赋值
+        function renderDetail(cur, daily) {
+            const feels = Math.round(cur.apparent_temperature);
+            els.feelsVal.innerText = getTempStr(feels);
+            els.precipVal.innerText = (daily.precipitation_probability_max[0] ?? 0) + "%";
+            els.humVal.innerText = (cur.relative_humidity ?? 0) + "%";
+
+            const uv = cur.uv_index ?? 0;
+            els.uvVal.innerText = Math.round(uv);
+            els.uvDesc.innerText = getUVDesc(uv);
+
+            els.windVal.innerText = (cur.wind_speed_10m ?? 0) + " km/h";
+            els.windDir.innerText = "风向 " + getWindDir(cur.wind_direction_10m ?? 0);
+
+            const visKM = cur.visibility ? (cur.visibility / 1000).toFixed(1) : 0;
+            els.visVal.innerText = visKM + " km";
+            els.pressVal.innerText = Math.round(cur.pressure_msl ?? 1013) + " hPa";
+
+            // 日出日落补零
+            const rise = new Date(daily.sunrise[0]);
+            const set = new Date(daily.sunset[0]);
+            const formatTime = (d) => {
+                const h = String(d.getHours()).padStart(2,"0");
+                const m = String(d.getMinutes()).padStart(2,"0");
+                return `${h}:${m}`;
+            }
+            els.sunrise.innerText = formatTime(rise);
+            els.sunset.innerText = formatTime(set);
+
+            const daySec = (set - rise) / 1000;
+            const dh = Math.floor(daySec / 3600);
+            const dm = Math.floor((daySec % 3600) / 60);
+            els.dayLen.innerText = `${dh}小时${dm}分钟`;
+        }
+
+        // ========== WAQI空气质量API（增加重试） ==========
+        async function loadAQI(retry = 2) {
+            try {
+                const url = `https://api.waqi.info/feed/geo:${cityLat};${cityLon}/?token=${WAQI_TOKEN}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if(data.status !== "ok") throw new Error("AQI接口返回异常");
+                const aqi = data.data.aqi;
+                els.aqiVal.innerText = aqi;
+                const level = getAQILevel(aqi);
+                els.aqiLevel.innerText = level.name;
+                els.aqiDetail.innerText = level.desc;
+            } catch(err) {
+                if(retry > 0) {
+                    setTimeout(()=>loadAQI(retry-1), 800);
+                    return;
+                }
+                els.aqiVal.innerText = "无数据";
+                els.aqiLevel.innerText = "获取失败";
+                els.aqiDetail.innerText = "当前区域无空气质量监测点或接口访问受限";
+                console.error("AQI加载错误", err);
+            }
+        }
+
+        // ========== 工具函数 ==========
+        // 天气代码转文字
+        function getWeatherText(code) {
+            const map = {
+                0: "晴朗",1: "大部晴朗",2: "多云",3: "阴天",
+                45: "雾",48: "霜雾",51: "小雨",53: "中雨",55: "大雨",
+                61: "小雨",63: "中雨",65: "暴雨",71: "小雪",73: "中雪",75: "大雪",
+                80: "阵雨",81: "强阵雨",82: "特大阵雨",95: "雷暴",96: "雷暴伴冰雹"
+            }
+            return map[code] || "未知天气";
+        }
+        // 天气图标
+        function getWeatherIcon(code) {
+            if([0,1].includes(code)) return "fa-sun-o";
+            if([2,3].includes(code)) return "fa-cloud";
+            if([45,48].includes(code)) return "fa-cloud";
+            if([51,53,55,61,63,65,80,81,82].includes(code)) return "fa-cloud-rain";
+            if([71,73,75].includes(code)) return "fa-snowflake-o";
+            if([95,96].includes(code)) return "fa-bolt";
+            return "fa-cloud";
+        }
+        // 根据天气切换背景渐变
+        function setBgByWeather(code) {
+            const body = document.body;
+            body.classList.remove("weather-gradient-sunny","weather-gradient-cloud","weather-gradient-rain","weather-gradient-snow");
+            if([0,1].includes(code)) body.classList.add("weather-gradient-sunny");
+            else if([2,3,45,48].includes(code)) body.classList.add("weather-gradient-cloud");
+            else if([51,53,55,61,63,65,80,81,82,95,96].includes(code)) body.classList.add("weather-gradient-rain");
+            else if([71,73,75].includes(code)) body.classList.add("weather-gradient-snow");
+        }
+        // 风向转换
+        function getWindDir(deg) {
+            const dirs = ["北","东北","东","东南","南","西南","西","西北"];
+            return dirs[Math.round(deg / 45) % 8];
+        }
+        // UV说明
+        function getUVDesc(uv) {
+            if(uv <= 2) return "低，无需防护";
+            if(uv <=5) return "中等，轻度防晒";
+            if(uv <=7) return "高，建议涂防晒";
+            if(uv <=10) return "极高，减少外出";
+            return "危险，避免户外";
+        }
+        // AQI等级
+        function getAQILevel(aqi) {
+            if(aqi <= 50) return {name:"优",desc:"空气质量令人满意，无空气污染"};
+            if(aqi <= 100) return {name:"良",desc:"空气质量可接受，少量敏感人群不适"};
+            if(aqi <= 150) return {name:"轻度污染",desc:"敏感人群呼吸道不适，户外减少活动"};
+            if(aqi <= 200) return {name:"中度污染",desc:"所有人均会出现不适症状"};
+            if(aqi <= 300) return {name:"重度污染",desc:"心脏、呼吸道病人尽量不外出"};
+            return {name:"严重污染",desc:"全体人群健康受严重影响，居家"};
+        }
+
+        // ========== 页面初始化 ==========
+        window.addEventListener("DOMContentLoaded", () => {
+            refreshAllData();
+        })
     </script>
 </body>
 </html>
