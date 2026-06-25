@@ -1,424 +1,647 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>秦皇岛实时天气 - 专业气象服务</title>
-    <!-- 引入外部资源（CDN，无需本地文件） -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Tailwind 配置 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#165DFF',
-                        secondary: '#36CFC9',
-                        dark: '#0F172A',
-                        light: '#F8FAFC'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui']
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .glass {
-                background: rgba(255, 255, 255, 0.1);
-                backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-            .weather-card {
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-            }
-            .weather-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-            }
-            .dropdown:hover .dropdown-menu {
-                display: block;
-            }
-            .raindrop {
-                animation: rain 0.5s linear infinite;
-            }
-            .snowflake {
-                animation: snow 3s linear infinite;
-            }
-            @keyframes rain {
-                0% { transform: translateY(-100px); opacity: 0; }
-                50% { opacity: 1; }
-                100% { transform: translateY(100px); opacity: 0; }
-            }
-            @keyframes snow {
-                0% { transform: translateY(-50px) rotate(0deg); opacity: 0; }
-                50% { opacity: 1; }
-                100% { transform: translateY(50px) rotate(360deg); opacity: 0; }
-            }
-            .sun {
-                animation: sun 8s linear infinite;
-            }
-            @keyframes sun {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>秦皇岛 · 实时天气</title>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #2b3b4c 0%, #1b2735 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 0 0 30px 0;
+      color: #fff;
+      transition: background 0.6s ease;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* 动态背景覆盖 (用于不同天气) */
+    .bg-sunny { background: linear-gradient(135deg, #4e8dd0 0%, #2160a1 100%); }
+    .bg-cloudy { background: linear-gradient(135deg, #6e7d8c 0%, #4a5568 100%); }
+    .bg-rain { background: linear-gradient(135deg, #3a4658 0%, #1e2a36 100%); }
+    .bg-snow { background: linear-gradient(135deg, #b0c4de 0%, #7a8b9f 100%); }
+    .bg-fog { background: linear-gradient(135deg, #708090 0%, #4f5b66 100%); }
+    .bg-default { background: linear-gradient(135deg, #2b3b4c 0%, #1b2735 100%); }
+
+    #rainCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    .main-container {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 600px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 10px;
+    }
+
+    /* 导航栏 */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-radius: 30px;
+      padding: 10px 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .logo {
+      font-weight: 600;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #fff;
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .nav-item {
+      background: rgba(255,255,255,0.08);
+      border: none;
+      color: #e2e8f0;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: 0.2s;
+      backdrop-filter: blur(5px);
+    }
+    .nav-item.active, .nav-item:hover {
+      background: rgba(255,255,255,0.22);
+      color: white;
+    }
+
+    /* 二级菜单 */
+    .dropdown {
+      position: relative;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 110%;
+      background: rgba(20, 25, 40, 0.95);
+      backdrop-filter: blur(25px);
+      border-radius: 16px;
+      min-width: 130px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+      z-index: 200;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .dropdown-content.show {
+      display: block;
+    }
+    .dropdown-content a {
+      color: #ccd6e0;
+      padding: 12px 20px;
+      display: block;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .dropdown-content a:hover {
+      background: rgba(255,255,255,0.15);
+      color: white;
+    }
+
+    /* 卡片 */
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      border-radius: 28px;
+      padding: 24px 20px;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+      transition: all 0.3s;
+    }
+
+    .location {
+      font-size: 1.1rem;
+      font-weight: 500;
+      opacity: 0.9;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .large-temp {
+      font-size: 6rem;
+      font-weight: 200;
+      text-align: center;
+      line-height: 1;
+      margin: 5px 0;
+      letter-spacing: -2px;
+    }
+    .condition {
+      text-align: center;
+      font-size: 1.2rem;
+      text-transform: capitalize;
+      margin-bottom: 8px;
+      opacity: 0.9;
+    }
+    .hi-lo {
+      text-align: center;
+      font-size: 0.95rem;
+      opacity: 0.7;
+      margin-bottom: 15px;
+    }
+
+    /* 详情条 */
+    .detail-row {
+      display: flex;
+      justify-content: space-around;
+      margin: 15px 0 5px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      padding-top: 15px;
+    }
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+    .detail-value {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-top: 4px;
+    }
+
+    /* 生活建议 */
+    .advice-card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 14px 18px;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.95rem;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .advice-icon { font-size: 1.5rem; }
+
+    /* 逐小时 */
+    .hourly-scroll {
+      display: flex;
+      overflow-x: auto;
+      gap: 12px;
+      padding-bottom: 8px;
+      scrollbar-width: thin;
+    }
+    .hour-item {
+      flex: 0 0 auto;
+      min-width: 65px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 10px 8px;
+      text-align: center;
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .hour-time { font-size: 0.8rem; opacity: 0.8; }
+    .hour-icon { font-size: 1.5rem; margin: 5px 0; }
+    .hour-temp { font-weight: 600; }
+    .hour-rain { font-size: 0.7rem; color: #a0c4ff; }
+
+    /* 图表容器 */
+    .chart-box {
+      height: 220px;
+      width: 100%;
+      margin-top: 5px;
+    }
+
+    #map {
+      height: 220px;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 480px) {
+      .large-temp { font-size: 5rem; }
+      .nav-item { padding: 6px 10px; font-size: 0.8rem; }
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-dark to-primary min-h-screen text-light overflow-x-hidden">
-    <!-- 导航栏 -->
-    <header class="fixed top-0 w-full z-50 glass">
-        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <i class="fa-solid fa-cloud-sun text-2xl text-secondary"></i>
-                <h1 class="text-xl font-bold">秦皇岛天气</h1>
-            </div>
-            
-            <!-- 菜单 -->
-            <nav class="hidden md:flex items-center gap-6">
-                <a href="#now" class="hover:text-secondary transition">实时天气</a>
-                <a href="#hourly" class="hover:text-secondary transition">24小时预报</a>
-                <a href="#daily" class="hover:text-secondary transition">7天预报</a>
-                
-                <!-- 二级菜单 -->
-                <div class="dropdown relative">
-                    <button class="flex items-center gap-1 hover:text-secondary transition">
-                        功能 <i class="fa-solid fa-chevron-down text-xs"></i>
-                    </button>
-                    <div class="dropdown-menu hidden absolute top-full right-0 mt-2 w-48 glass rounded-lg py-2 shadow-xl">
-                        <a href="#chart" class="block px-4 py-2 hover:bg-primary/30 transition">温度曲线</a>
-                        <a href="#map" class="block px-4 py-2 hover:bg-primary/30 transition">天气地图</a>
-                        <a href="#about" class="block px-4 py-2 hover:bg-primary/30 transition">关于数据</a>
-                    </div>
-                </div>
-            </nav>
-            
-            <!-- 移动端菜单按钮 -->
-            <button id="menuBtn" class="md:hidden text-2xl">
-                <i class="fa-solid fa-bars"></i>
-            </button>
+<body id="bodyBg">
+  <canvas id="rainCanvas"></canvas>
+
+  <div class="main-container">
+    <!-- 导航栏 + 二级菜单 -->
+    <nav class="navbar">
+      <div class="logo">🌊 秦皇岛</div>
+      <div class="nav-links">
+        <button class="nav-item" id="navNow">实时</button>
+        <button class="nav-item" id="navHourly">逐小时</button>
+        <button class="nav-item" id="navDaily">7日</button>
+        <button class="nav-item" id="navMapBtn">地图</button>
+        <div class="dropdown">
+          <button class="nav-item" id="dropdownBtn">更多 ▾</button>
+          <div class="dropdown-content" id="dropdownContent">
+            <a id="refreshBtn">🔄 刷新</a>
+            <a id="aboutBtn">ℹ️ 关于</a>
+          </div>
         </div>
-    </header>
+      </div>
+    </nav>
 
-    <!-- 主内容区 -->
-    <main class="container mx-auto px-4 pt-24 pb-12">
-        <!-- 实时天气模块 -->
-        <section id="now" class="mb-12">
-            <div class="glass rounded-3xl p-6 md:p-10 weather-card relative overflow-hidden">
-                <!-- 天气动画容器 -->
-                <div id="weatherAnimation" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
-                
-                <div class="relative z-10">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-                        <div>
-                            <h2 class="text-3xl md:text-4xl font-bold mb-2">秦皇岛市</h2>
-                            <p class="text-gray-300" id="updateTime">加载中...</p>
-                        </div>
-                        <div class="mt-4 md:mt-0 text-right">
-                            <p class="text-5xl md:text-6xl font-light" id="currentTemp">--°C</p>
-                            <p class="text-xl text-secondary" id="currentWeather">加载中...</p>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                        <div class="glass rounded-xl p-4 text-center">
-                            <i class="fa-solid fa-wind text-primary text-xl mb-2"></i>
-                            <p class="text-sm text-gray-300">风速</p>
-                            <p class="text-lg font-semibold" id="windSpeed">-- km/h</p>
-                        </div>
-                        <div class="glass rounded-xl p-4 text-center">
-                            <i class="fa-solid fa-droplet text-primary text-xl mb-2"></i>
-                            <p class="text-sm text-gray-300">湿度</p>
-                            <p class="text-lg font-semibold" id="humidity">-- %</p>
-                        </div>
-                        <div class="glass rounded-xl p-4 text-center">
-                            <i class="fa-solid fa-sun text-primary text-xl mb-2"></i>
-                            <p class="text-sm text-gray-300">紫外线</p>
-                            <p class="text-lg font-semibold" id="uvIndex">--</p>
-                        </div>
-                        <div class="glass rounded-xl p-4 text-center">
-                            <i class="fa-solid fa-pressure text-primary text-xl mb-2"></i>
-                            <p class="text-sm text-gray-300">气压</p>
-                            <p class="text-lg font-semibold" id="pressure">-- hPa</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+    <!-- 当前天气卡片 -->
+    <div class="card" id="currentCard">
+      <div class="location">📍 秦皇岛市</div>
+      <div class="large-temp" id="tempMain">--°</div>
+      <div class="condition" id="weatherDesc">--</div>
+      <div class="hi-lo" id="hiLo">最高 --° / 最低 --°</div>
+      <div class="detail-row">
+        <div class="detail-item">💧 湿度 <span class="detail-value" id="humVal">--%</span></div>
+        <div class="detail-item">🌬️ 风速 <span class="detail-value" id="windVal">-- km/h</span></div>
+        <div class="detail-item">🌡️ 体感 <span class="detail-value" id="feelVal">--°</span></div>
+        <div class="detail-item">👁️ 能见度 <span class="detail-value" id="visVal">-- km</span></div>
+      </div>
+      <!-- 生活建议 -->
+      <div class="advice-card" id="adviceBox">
+        <span class="advice-icon">💡</span>
+        <span id="adviceText">加载中…</span>
+      </div>
+    </div>
 
-        <!-- 24小时预报 -->
-        <section id="hourly" class="mb-12">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
-                <i class="fa-solid fa-clock text-secondary mr-3"></i> 24小时天气预报
-            </h2>
-            <div class="glass rounded-3xl p-6 overflow-x-auto">
-                <div id="hourlyContainer" class="flex gap-4 min-w-max">
-                    <!-- 动态加载小时数据 -->
-                    <div class="text-center py-10">加载中...</div>
-                </div>
-            </div>
-        </section>
+    <!-- 逐小时 -->
+    <div class="card" id="hourlySection">
+      <h3 style="font-weight:500; margin-bottom:12px;">⏳ 逐小时预报</h3>
+      <div class="hourly-scroll" id="hourlyContainer"></div>
+    </div>
 
-        <!-- 7天预报 -->
-        <section id="daily" class="mb-12">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
-                <i class="fa-solid fa-calendar text-secondary mr-3"></i> 7天天气预报
-            </h2>
-            <div class="glass rounded-3xl p-6">
-                <div id="dailyContainer" class="space-y-4">
-                    <!-- 动态加载7天数据 -->
-                    <div class="text-center py-10">加载中...</div>
-                </div>
-            </div>
-        </section>
+    <!-- 7日图表 -->
+    <div class="card" id="dailySection">
+      <h3 style="font-weight:500; margin-bottom:8px;">📈 7日温度趋势</h3>
+      <div class="chart-box"><canvas id="tempChart"></canvas></div>
+    </div>
 
-        <!-- 温度折线图 -->
-        <section id="chart" class="mb-12">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
-                <i class="fa-solid fa-chart-line text-secondary mr-3"></i> 温度变化曲线
-            </h2>
-            <div class="glass rounded-3xl p-6">
-                <canvas id="tempChart" height="250"></canvas>
-            </div>
-        </section>
+    <!-- 地图 -->
+    <div class="card" id="mapSection">
+      <h3 style="font-weight:500; margin-bottom:8px;">🗺️ 天气地图</h3>
+      <div id="map"></div>
+    </div>
+  </div>
 
-        <!-- 天气地图 -->
-        <section id="map" class="mb-12">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
-                <i class="fa-solid fa-map-location-dot text-secondary mr-3"></i> 秦皇岛天气地图
-            </h2>
-            <div class="glass rounded-3xl p-6">
-                <div id="mapContainer" class="w-full h-[300px] md:h-[400px] rounded-2xl"></div>
-            </div>
-        </section>
+  <script>
+    (function() {
+      // 秦皇岛坐标
+      const LAT = 39.9389, LON = 119.5983;
 
-        <!-- 关于数据 -->
-        <section id="about" class="mb-12">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
-                <i class="fa-solid fa-circle-info text-secondary mr-3"></i> 数据说明
-            </h2>
-            <div class="glass rounded-3xl p-6">
-                <p class="mb-2">✅ 数据来源：<span class="text-secondary">Open-Meteo 全球权威气象API</span></p>
-                <p class="mb-2">✅ 数据类型：实时天气、逐小时预报、7天预报</p>
-                <p class="mb-2">✅ 更新频率：<span class="text-secondary">自动每10分钟刷新一次</span></p>
-                <p>✅ 使用状态：完全免费、无需注册、无调用限制、低错误率</p>
-            </div>
-        </section>
-    </main>
+      // DOM 元素
+      const bodyBg = document.getElementById('bodyBg');
+      const tempMain = document.getElementById('tempMain');
+      const weatherDesc = document.getElementById('weatherDesc');
+      const hiLo = document.getElementById('hiLo');
+      const humVal = document.getElementById('humVal');
+      const windVal = document.getElementById('windVal');
+      const feelVal = document.getElementById('feelVal');
+      const visVal = document.getElementById('visVal');
+      const hourlyContainer = document.getElementById('hourlyContainer');
+      const adviceText = document.getElementById('adviceText');
+      const rainCanvas = document.getElementById('rainCanvas');
+      const ctx = rainCanvas.getContext('2d');
 
-    <!-- 页脚 -->
-    <footer class="glass py-6 text-center text-sm text-gray-400">
-        <p>© 2025 秦皇岛天气 | 数据由 Open-Meteo 提供 | 高级气象可视化页面</p>
-    </footer>
+      let tempChart = null;
+      let map = null;
+      let mapMarker = null;
 
-    <script>
-        // 秦皇岛坐标（固定）
-        const QINHUANGDAO_LAT = 39.9351;
-        const QINHUANGDAO_LON = 119.6111;
+      // ---------- 完整 WMO 天气代码映射 ----------
+      const weatherMap = {
+        0: { desc: '晴天', emoji: '☀️', isRain: false, bg: 'bg-sunny' },
+        1: { desc: '大部晴朗', emoji: '🌤️', isRain: false, bg: 'bg-sunny' },
+        2: { desc: '局部多云', emoji: '⛅', isRain: false, bg: 'bg-cloudy' },
+        3: { desc: '多云', emoji: '☁️', isRain: false, bg: 'bg-cloudy' },
+        45: { desc: '雾', emoji: '🌫️', isRain: false, bg: 'bg-fog' },
+        48: { desc: '霜冻雾', emoji: '🌫️', isRain: false, bg: 'bg-fog' },
+        51: { desc: '小毛毛雨', emoji: '🌦️', isRain: true, bg: 'bg-rain' },
+        53: { desc: '毛毛雨', emoji: '🌦️', isRain: true, bg: 'bg-rain' },
+        55: { desc: '大毛毛雨', emoji: '🌧️', isRain: true, bg: 'bg-rain' },
+        56: { desc: '冻毛毛雨', emoji: '🌨️', isRain: true, bg: 'bg-rain' },
+        57: { desc: '冻毛毛雨', emoji: '🌨️', isRain: true, bg: 'bg-rain' },
+        61: { desc: '小雨', emoji: '🌧️', isRain: true, bg: 'bg-rain' },
+        63: { desc: '中雨', emoji: '🌧️', isRain: true, bg: 'bg-rain' },
+        65: { desc: '大雨', emoji: '🌧️', isRain: true, bg: 'bg-rain' },
+        66: { desc: '小冻雨', emoji: '🌨️', isRain: true, bg: 'bg-rain' },
+        67: { desc: '冻雨', emoji: '🌨️', isRain: true, bg: 'bg-rain' },
+        71: { desc: '小雪', emoji: '❄️', isRain: false, bg: 'bg-snow' },
+        73: { desc: '中雪', emoji: '❄️', isRain: false, bg: 'bg-snow' },
+        75: { desc: '大雪', emoji: '❄️', isRain: false, bg: 'bg-snow' },
+        77: { desc: '雪粒', emoji: '❄️', isRain: false, bg: 'bg-snow' },
+        80: { desc: '小阵雨', emoji: '🌦️', isRain: true, bg: 'bg-rain' },
+        81: { desc: '阵雨', emoji: '🌧️', isRain: true, bg: 'bg-rain' },
+        82: { desc: '大阵雨', emoji: '🌧️', isRain: true, bg: 'bg-rain' },
+        85: { desc: '小阵雪', emoji: '❄️', isRain: false, bg: 'bg-snow' },
+        86: { desc: '阵雪', emoji: '❄️', isRain: false, bg: 'bg-snow' },
+        95: { desc: '雷暴', emoji: '⛈️', isRain: true, bg: 'bg-rain' },
+        96: { desc: '雷暴伴冰雹', emoji: '⛈️', isRain: true, bg: 'bg-rain' },
+        99: { desc: '强雷暴伴冰雹', emoji: '⛈️', isRain: true, bg: 'bg-rain' }
+      };
 
-        // DOM加载完成后执行
-        document.addEventListener('DOMContentLoaded', () => {
-            initMap();
-            fetchWeatherData();
-            // 每10分钟自动更新
-            setInterval(fetchWeatherData, 600000);
+      function getWeather(code) {
+        return weatherMap[code] || { desc: '多云', emoji: '☁️', isRain: false, bg: 'bg-default' };
+      }
+
+      // ---------- 趣味生活建议 ----------
+      const adviceDB = {
+        sunny: [
+          '阳光正好，适合去海边散步 🌊',
+          '紫外线强，记得涂防晒哦 🧴',
+          '今天适合晾晒衣物，晒晒被子吧',
+          '天气晴好，心情也要明亮起来呀 ✨'
+        ],
+        cloudy: [
+          '云朵像棉花糖，适合喝杯咖啡 ☕',
+          '阴天不晒，适合户外运动 🏃',
+          '天空虽然阴沉，但你的笑容可以点亮一切'
+        ],
+        rain: [
+          '出门记得带伞，别淋成落汤鸡 🐔',
+          '雨天最适合窝在家里看电影 🎬',
+          '路面湿滑，开车慢行，安全第一',
+          '雨后或许能遇见彩虹哦 🌈'
+        ],
+        snow: [
+          '下雪啦！可以堆雪人啦 ⛄',
+          '注意保暖，路面结冰小心行走',
+          '雪天空气清新，深呼吸一下吧'
+        ],
+        fog: [
+          '大雾天气，开车记得开雾灯 🚗',
+          '朦胧也是一种美，但要注意安全'
+        ],
+        default: [
+          '无论什么天气，都要保持好心情 ❤️',
+          '今天也是元气满满的一天',
+          '喝杯热水，对自己好一点'
+        ]
+      };
+
+      function getAdvice(weatherCode) {
+        const info = getWeather(weatherCode);
+        const desc = info.desc;
+        let pool = adviceDB.default;
+        if (desc.includes('晴')) pool = adviceDB.sunny;
+        else if (desc.includes('云')) pool = adviceDB.cloudy;
+        else if (desc.includes('雨') || desc.includes('雷')) pool = adviceDB.rain;
+        else if (desc.includes('雪')) pool = adviceDB.snow;
+        else if (desc.includes('雾')) pool = adviceDB.fog;
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      // ---------- 雨滴/雪动画 ----------
+      let rainActive = false;
+      let drops = [];
+      const MAX = 120;
+
+      function resizeCanvas() {
+        rainCanvas.width = window.innerWidth;
+        rainCanvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      function startRain() {
+        if (rainActive) return;
+        rainActive = true;
+        drops = [];
+        for (let i=0; i<MAX; i++) {
+          drops.push({
+            x: Math.random() * rainCanvas.width,
+            y: Math.random() * rainCanvas.height,
+            len: Math.random()*20+10,
+            speed: Math.random()*12+8,
+            opacity: Math.random()*0.5+0.2
+          });
+        }
+        animateRain();
+      }
+
+      function stopRain() {
+        rainActive = false;
+        ctx.clearRect(0,0,rainCanvas.width,rainCanvas.height);
+      }
+
+      function animateRain() {
+        if (!rainActive) return;
+        ctx.clearRect(0,0,rainCanvas.width,rainCanvas.height);
+        ctx.beginPath();
+        for (let d of drops) {
+          ctx.moveTo(d.x, d.y);
+          ctx.lineTo(d.x-1, d.y+d.len);
+          ctx.strokeStyle = `rgba(174,194,224,${d.opacity})`;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          d.y += d.speed;
+          if (d.y > rainCanvas.height) {
+            d.y = -10;
+            d.x = Math.random()*rainCanvas.width;
+          }
+        }
+        requestAnimationFrame(animateRain);
+      }
+
+      function updateRain(weatherCode) {
+        const info = getWeather(weatherCode);
+        info.isRain ? startRain() : stopRain();
+      }
+
+      // ---------- 获取天气数据 ----------
+      async function fetchWeather() {
+        try {
+          const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}`+
+            `&hourly=temperature_2m,precipitation_probability,weathercode,relativehumidity_2m,windspeed_10m,visibility`+
+            `&daily=temperature_2m_max,temperature_2m_min,weathercode`+
+            `&timezone=Asia/Shanghai&forecast_days=7`;
+          const res = await fetch(url);
+          if (!res.ok) throw new Error('网络错误');
+          return await res.json();
+        } catch(e) {
+          console.error(e);
+          return null;
+        }
+      }
+
+      function updateUI(data) {
+        if (!data) {
+          alert('天气数据获取失败，请刷新重试');
+          return;
+        }
+        const hourly = data.hourly;
+        const daily = data.daily;
+
+        const nowTemp = hourly.temperature_2m[0];
+        const nowCode = hourly.weathercode[0];
+        const nowHum = hourly.relativehumidity_2m[0];
+        const nowWind = hourly.windspeed_10m[0];
+        const nowVis = (hourly.visibility[0] / 1000).toFixed(1) || 'N/A';
+        const todayMax = daily.temperature_2m_max[0];
+        const todayMin = daily.temperature_2m_min[0];
+
+        const info = getWeather(nowCode);
+
+        // 更新当前天气显示
+        tempMain.textContent = `${Math.round(nowTemp)}°`;
+        weatherDesc.textContent = info.emoji + ' ' + info.desc;
+        hiLo.textContent = `最高 ${Math.round(todayMax)}° / 最低 ${Math.round(todayMin)}°`;
+        humVal.textContent = `${nowHum}%`;
+        windVal.textContent = `${nowWind} km/h`;
+        feelVal.textContent = `${Math.round(nowTemp)}°`;  // Open-Meteo免费版无体感，用温度近似
+        visVal.textContent = `${nowVis} km`;
+
+        // 背景与动效
+        bodyBg.className = info.bg;
+        updateRain(nowCode);
+
+        // 生活建议
+        adviceText.textContent = getAdvice(nowCode);
+
+        // 逐小时
+        hourlyContainer.innerHTML = '';
+        const maxH = Math.min(hourly.time.length, 24);
+        for (let i=0; i<maxH; i++) {
+          const t = hourly.time[i];
+          const temp = hourly.temperature_2m[i];
+          const code = hourly.weathercode[i];
+          const prob = hourly.precipitation_probability[i];
+          const hInfo = getWeather(code);
+          const date = new Date(t);
+          const hour = date.getHours();
+          const div = document.createElement('div');
+          div.className = 'hour-item';
+          div.innerHTML = `<div class="hour-time">${hour}:00</div>
+            <div class="hour-icon">${hInfo.emoji}</div>
+            <div class="hour-temp">${Math.round(temp)}°</div>
+            <div class="hour-rain">💧${prob}%</div>`;
+          hourlyContainer.appendChild(div);
+        }
+
+        // 7日图表
+        const labels = daily.time.map(t => {
+          const d = new Date(t);
+          return `${d.getMonth()+1}/${d.getDate()}`;
+        });
+        const maxT = daily.temperature_2m_max;
+        const minT = daily.temperature_2m_min;
+        if (tempChart) tempChart.destroy();
+        const ctx = document.getElementById('tempChart').getContext('2d');
+        tempChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              { label: '最高', data: maxT, borderColor: '#ff9f7c', backgroundColor: 'rgba(255,159,124,0.1)', tension: 0.3, pointRadius: 3 },
+              { label: '最低', data: minT, borderColor: '#7cc0ff', backgroundColor: 'rgba(124,192,255,0.1)', tension: 0.3, pointRadius: 3 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#ddd' } } },
+            scales: {
+              x: { ticks: { color: '#aaa' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+              y: { ticks: { color: '#aaa' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+            }
+          }
         });
 
-        // 初始化地图
-        function initMap() {
-            const map = L.map('mapContainer').setView([QINHUANGDAO_LAT, QINHUANGDAO_LON], 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
-            L.marker([QINHUANGDAO_LAT, QINHUANGDAO_LON])
-                .addTo(map)
-                .bindPopup('秦皇岛市')
-                .openPopup();
+        // 更新地图弹窗
+        if (map && mapMarker) {
+          mapMarker.setPopupContent(`<b>秦皇岛</b><br>${info.emoji} ${info.desc} ${Math.round(nowTemp)}°C<br>💧${nowHum}% 🌬️${nowWind}km/h`);
         }
+      }
 
-        // 获取天气数据（权威免费API）
-        async function fetchWeatherData() {
-            try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${QINHUANGDAO_LAT}&longitude=${QINHUANGDAO_LON}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,pressure_msl&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Asia/Shanghai&forecast_days=7`;
-                
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('网络请求失败');
-                const data = await response.json();
-                
-                // 更新页面数据
-                updateCurrentWeather(data.current, data.daily);
-                updateHourlyWeather(data.hourly);
-                updateDailyWeather(data.daily);
-                updateTemperatureChart(data.hourly);
-                updateUpdateTime();
-            } catch (error) {
-                console.error('天气数据加载失败：', error);
-                document.getElementById('currentTemp').textContent = '加载失败';
-            }
-        }
+      // 初始化地图
+      function initMap() {
+        if (map) return;
+        map = L.map('map', { center: [LAT, LON], zoom: 10, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+        mapMarker = L.marker([LAT, LON]).addTo(map).bindPopup('加载中...');
+      }
 
-        // 天气代码解析
-        function getWeatherInfo(code) {
-            const map = {
-                0: { text: '晴天', icon: 'sun', effect: 'sun' },
-                1: { text: '多云', icon: 'cloud-sun', effect: '' },
-                2: { text: '阴天', icon: 'cloud', effect: '' },
-                3: { text: '阴天', icon: 'cloud', effect: '' },
-                45: { text: '雾', icon: 'smog', effect: '' },
-                48: { text: '雾', icon: 'smog', effect: '' },
-                51: { text: '小雨', icon: 'cloud-rain', effect: 'rain' },
-                61: { text: '小雨', icon: 'cloud-rain', effect: 'rain' },
-                63: { text: '中雨', icon: 'cloud-rain', effect: 'rain' },
-                65: { text: '大雨', icon: 'cloud-showers-heavy', effect: 'rain' },
-                71: { text: '小雪', icon: 'snowflake', effect: 'snow' },
-                73: { text: '中雪', icon: 'snowflake', effect: 'snow' },
-                75: { text: '大雪', icon: 'snowflake', effect: 'snow' },
-            };
-            return map[code] || { text: '未知', icon: 'question', effect: '' };
-        }
+      async function loadAll() {
+        const data = await fetchWeather();
+        updateUI(data);
+        if (!map) initMap();
+      }
 
-        // 更新实时天气
-        function updateCurrentWeather(current, daily) {
-            const weather = getWeatherInfo(current.weather_code);
-            document.getElementById('currentTemp').textContent = `${Math.round(current.temperature_2m)}°C`;
-            document.getElementById('currentWeather').textContent = weather.text;
-            document.getElementById('windSpeed').textContent = `${Math.round(current.wind_speed_10m)} km/h`;
-            document.getElementById('humidity').textContent = `${current.relative_humidity_2m} %`;
-            document.getElementById('pressure').textContent = `${Math.round(current.pressure_msl)} hPa`;
-            document.getElementById('uvIndex').textContent = '低';
-            
-            // 设置天气动效
-            setWeatherEffect(weather.effect);
-        }
+      // 页面加载
+      window.addEventListener('load', () => {
+        loadAll();
+        setInterval(loadAll, 15 * 60 * 1000);
+      });
 
-        // 设置天气动画
-        function setWeatherEffect(type) {
-            const container = document.getElementById('weatherAnimation');
-            container.innerHTML = '';
-            
-            if (type === 'rain') {
-                for (let i = 0; i < 30; i++) {
-                    const drop = document.createElement('div');
-                    drop.className = 'raindrop absolute w-0.5 h-8 bg-blue-300/50 rounded-full';
-                    drop.style.left = `${Math.random() * 100}%`;
-                    drop.style.animationDelay = `${Math.random() * 0.5}s`;
-                    container.appendChild(drop);
-                }
-            } else if (type === 'snow') {
-                for (let i = 0; i < 20; i++) {
-                    const snow = document.createElement('div');
-                    snow.className = 'snowflake absolute text-white/70 text-xs';
-                    snow.innerHTML = '❄';
-                    snow.style.left = `${Math.random() * 100}%`;
-                    snow.style.animationDelay = `${Math.random() * 3}s`;
-                    container.appendChild(snow);
-                }
-            } else if (type === 'sun') {
-                const sun = document.createElement('div');
-                sun.className = 'sun absolute top-4 right-4 text-4xl text-yellow-400';
-                sun.innerHTML = '☀';
-                container.appendChild(sun);
-            }
-        }
+      // 导航点击
+      document.getElementById('navNow').addEventListener('click', ()=> document.getElementById('currentCard').scrollIntoView({behavior:'smooth'}));
+      document.getElementById('navHourly').addEventListener('click', ()=> document.getElementById('hourlySection').scrollIntoView({behavior:'smooth'}));
+      document.getElementById('navDaily').addEventListener('click', ()=> document.getElementById('dailySection').scrollIntoView({behavior:'smooth'}));
+      document.getElementById('navMapBtn').addEventListener('click', ()=> {
+        document.getElementById('mapSection').scrollIntoView({behavior:'smooth'});
+        setTimeout(()=>{ if(map) map.invalidateSize(); }, 300);
+      });
+      document.getElementById('refreshBtn').addEventListener('click', (e)=>{
+        e.preventDefault();
+        loadAll();
+      });
+      document.getElementById('aboutBtn').addEventListener('click', (e)=>{
+        e.preventDefault();
+        alert('🌦 秦皇岛实时天气\n数据：Open-Meteo (免费)\n地图：OpenStreetMap\n界面灵感来自 Apple 天气');
+      });
 
-        // 更新24小时预报
-        function updateHourlyWeather(hourly) {
-            const container = document.getElementById('hourlyContainer');
-            container.innerHTML = '';
-            
-            for (let i = 0; i < 24; i++) {
-                const time = new Date(hourly.time[i]);
-                const h = time.getHours();
-                const temp = Math.round(hourly.temperature_2m[i]);
-                const weather = getWeatherInfo(hourly.weather_code[i]);
-                
-                const card = document.createElement('div');
-                card.className = 'weather-card glass rounded-xl p-4 w-20 text-center';
-                card.innerHTML = `
-                    <p class="text-sm mb-2">${h}:00</p>
-                    <i class="fa-solid fa-${weather.icon} text-xl text-secondary mb-2"></i>
-                    <p class="font-bold">${temp}°</p>
-                `;
-                container.appendChild(card);
-            }
+      // 二级菜单交互
+      const dropdownBtn = document.getElementById('dropdownBtn');
+      const dropdownContent = document.getElementById('dropdownContent');
+      dropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdownContent.classList.toggle('show');
+      });
+      document.addEventListener('click', (e) => {
+        if (!dropdownBtn.contains(e.target) && !dropdownContent.contains(e.target)) {
+          dropdownContent.classList.remove('show');
         }
+      });
 
-        // 更新7天预报
-        function updateDailyWeather(daily) {
-            const container = document.getElementById('dailyContainer');
-            container.innerHTML = '';
-            const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-            
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(daily.time[i]);
-                const day = week[date.getDay()];
-                const max = Math.round(daily.temperature_2m_max[i]);
-                const min = Math.round(daily.temperature_2m_min[i]);
-                const weather = getWeatherInfo(daily.weather_code[i]);
-                
-                const item = document.createElement('div');
-                item.className = 'flex items-center justify-between p-3 glass rounded-xl';
-                item.innerHTML = `
-                    <p class="w-16">${day}</p>
-                    <i class="fa-solid fa-${weather.icon} text-lg text-secondary"></i>
-                    <p class="text-sm">${weather.text}</p>
-                    <p class="font-bold">${min}° ~ ${max}°</p>
-                `;
-                container.appendChild(item);
-            }
-        }
-
-        // 更新温度折线图
-        function updateTemperatureChart(hourly) {
-            const ctx = document.getElementById('tempChart').getContext('2d');
-            const hours = [];
-            const temps = [];
-            
-            for (let i = 0; i < 24; i++) {
-                hours.push(new Date(hourly.time[i]).getHours() + ':00');
-                temps.push(Math.round(hourly.temperature_2m[i]));
-            }
-            
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: hours,
-                    datasets: [{
-                        label: '24小时温度 (°C)',
-                        data: temps,
-                        borderColor: '#36CFC9',
-                        backgroundColor: 'rgba(54, 207, 201, 0.2)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: { display: true, labels: { color: '#fff' } }
-                    },
-                    scales: {
-                        x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#fff' } },
-                        y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#fff' } }
-                    }
-                }
-            });
-        }
-
-        // 更新最后刷新时间
-        function updateUpdateTime() {
-            const now = new Date();
-            const timeStr = `最后更新：${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-            document.getElementById('updateTime').textContent = timeStr;
-        }
-    </script>
+      // 地图尺寸修正
+      window.addEventListener('resize', ()=>{
+        if(map) setTimeout(()=>map.invalidateSize(), 100);
+      });
+    })();
+  </script>
 </body>
 </html>
